@@ -1,4 +1,4 @@
-A MVI demo base on [mosby](https://github.com/sockeqwe/mosby)
+A MVI demo of the blog [使用MVI (Model-View-Intent) 打造响应式App](http://www.jianshu.com/p/5c59ac39ab6e) base on [mosby](https://github.com/sockeqwe/mosby)
 
     Copyright (C) 2017 littlegnal
 
