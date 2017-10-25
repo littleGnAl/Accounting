@@ -1,0 +1,35 @@
+<resources>
+  <string name="app_name">Accounting</string>
+
+  <string name="amount_format">¥%1$.2f</string>
+
+  <string name="main_accounting_detail_header_sum">共(¥%1$.2f)</string>
+  <string name="main_accounting_no_accounting_records">没有记账记录</string>
+  <string name="delete_confirm_tips">确定要删除该记录吗？</string>
+
+  <string-array name="accounting_tag_list">
+    <item>早餐</item>
+    <item>午餐</item>
+    <item>晚餐</item>
+    <item>宵夜</item>
+    <item>下午茶</item>
+    <item>出行</item>
+    <item>充值</item>
+    <item>淘宝</item>
+    <item>买女装</item>
+  </string-array>
+
+  <string name="add_or_edit_add_title">Add</string>
+  <string name="add_or_edit_edit_title">Edit</string>
+  <string name="add_or_edit_pay">支出</string>
+  <string name="add_or_edit_tag">标签</string>
+  <string name="add_or_edit_date">时间</string>
+  <string name="add_or_edit_remarks">备注</string>
+  <string name="add_or_edit_confirm">确认</string>
+  <string name="add_or_edit_select_date_tips">请选择时间</string>
+
+  <string name="summary_title">Summary</string>
+  <string name="summary_period_3_months">三个月</string>
+  <string name="summary_period_6_months">半年</string>
+  <string name="summary_period_1_year">一年</string>
+</resources>

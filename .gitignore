@@ -1,0 +1,21 @@
+.classpath
+.project
+.settings
+eclipsebin
+
+bin
+gen
+build
+out
+
+.idea
+*.iml
+
+.DS_Store
+
+# Gradle
+.gradle
+local.properties
+reports
+
+projectFilesBackup

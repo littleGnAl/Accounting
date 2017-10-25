@@ -1,0 +1,80 @@
+apply plugin: 'com.android.application'
+
+apply plugin: 'kotlin-android'
+
+apply plugin: 'kotlin-android-extensions'
+
+apply plugin: 'kotlin-kapt'
+
+android {
+  compileSdkVersion versions.compileSdkVersion
+  buildToolsVersion versions.buildToolsVersion
+  defaultConfig {
+    applicationId "com.littlegnal.accounting"
+    minSdkVersion versions.minSdkVersion
+    targetSdkVersion versions.targetSdkVersion
+    versionCode 1
+    versionName "1.0"
+    testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+  }
+  buildTypes {
+    release {
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+    }
+  }
+
+  kapt {
+    correctErrorTypes = true
+  }
+
+
+  androidExtensions {
+    experimental = true
+  }
+
+  testOptions {
+    unitTests.returnDefaultValues = true
+  }
+}
+
+dependencies {
+//  implementation "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
+  implementation libraries.kotlinStdlibJre7
+  implementation libraries.supportAppcompatV7
+  implementation libraries.supportDesign
+  implementation libraries.constraintLayout
+  implementation libraries.timber
+  implementation libraries.mosby3
+  implementation libraries.dagger2
+  implementation libraries.dagger2Android
+  implementation libraries.dagger2AndroidSupport
+  kapt libraries.dagger2Compiler
+  kapt libraries.dagger2AndroidCompiler
+  implementation libraries.archComponentRoom
+  kapt libraries.archComponentRoomCompiler
+  implementation libraries.archComponentRxJava2
+  implementation libraries.epoxy
+  kapt libraries.epoxyCompiler
+  implementation libraries.rxAndroid2
+  implementation libraries.rxJava2
+  implementation libraries.rxBindingRecyclerKotlin
+  implementation libraries.flexbox
+  implementation libraries.stetho
+
+  debugImplementation libraries.leakCanary
+
+  testImplementation 'junit:junit:4.12'
+  testImplementation libraries.archComponentRoomTest
+  testImplementation libraries.archComponentCoreTest
+  testImplementation libraries.hamcrestAll
+  testImplementation libraries.mockito
+
+  androidTestImplementation 'junit:junit:4.12'
+  androidTestImplementation libraries.archComponentRoomTest
+  androidTestImplementation libraries.archComponentCoreTest
+
+  androidTestImplementation 'com.android.support.test:runner:1.0.0'
+  androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.0'
+
+}
