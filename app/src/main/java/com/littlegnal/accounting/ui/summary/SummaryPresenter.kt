@@ -74,7 +74,10 @@ class SummaryPresenter @Inject constructor(
 
     val today = Calendar.getInstance().apply {
       set(Calendar.DAY_OF_MONTH, 1)
+      set(Calendar.HOUR, 0)
+      set(Calendar.MINUTE, 0)
       set(Calendar.SECOND, 0)
+      set(Calendar.MILLISECOND, 0)
       add(Calendar.MONTH, -5)
     }
     val firstMonthCalendar = Calendar.getInstance().apply { time = today.time }

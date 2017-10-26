@@ -48,7 +48,10 @@ class SummaryPresenterTest {
 
     val today = Calendar.getInstance().apply {
       set(Calendar.DAY_OF_MONTH, 1)
+      set(Calendar.HOUR, 0)
+      set(Calendar.MINUTE, 0)
       set(Calendar.SECOND, 0)
+      set(Calendar.MILLISECOND, 0)
     }
     val latestCalendar = Calendar.getInstance().apply { time = today.time }
     today.add(Calendar.MONTH, -5)
