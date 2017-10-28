@@ -209,6 +209,11 @@ class MainViewPresenterTest {
     val loadingState = MainViewState(lastDate = today, isLoading = true)
     val firstPageDataState = MainViewState(lastDate = today, isNoData = true)
 
+    mainTestImpl.fireLoadFirstPageIntent()
+    mainTestImpl.assertViewStateRendered(
+        loadingState,
+        firstPageDataState)
+
     val tempCalendar = Calendar.getInstance().apply { this.add(Calendar.HOUR, -1) }
     val account = Accounting(
         100.0f,
@@ -239,7 +244,6 @@ class MainViewPresenterTest {
         lastDate = content.createTime,
         accountingDetailList = listOf(header, content))
 
-    mainTestImpl.fireLoadFirstPageIntent()
     addOrUpdatePublisher.onNext(account)
 
     mainTestImpl.assertViewStateRendered(
