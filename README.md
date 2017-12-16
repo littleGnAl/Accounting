@@ -1,4 +1,4 @@
-[![CircleCI](https://circleci.com/gh/littleGnAl/Accounting/tree/master.svg?style=shield&circle-token=bb8f800ed32c82ad7f5c5042ed3c9ae5462c95e2)](https://circleci.com/gh/littleGnAl/Accounting/tree/master)
+[![CircleCI](https://circleci.com/gh/littleGnAl/Accounting/tree/accounting-mosby.svg?style=shield&circle-token=bb8f800ed32c82ad7f5c5042ed3c9ae5462c95e2)](https://circleci.com/gh/littleGnAl/Accounting/tree/accounting-mosby)
 
 A MVI demo of the blog [使用MVI (Model-View-Intent) 打造响应式App](http://www.jianshu.com/p/5c59ac39ab6e) base on [mosby](https://github.com/sockeqwe/mosby)
 
