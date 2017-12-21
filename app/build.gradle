@@ -22,6 +22,12 @@ android {
       minifyEnabled false
       proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
     }
+
+    debug {
+      debuggable true
+      minifyEnabled false
+      proguardFiles getDefaultProguardFile('proguard-android.txt'), 'proguard-rules.pro'
+    }
   }
 
   kapt {
@@ -36,30 +42,41 @@ android {
 }
 
 dependencies {
-//  implementation "org.jetbrains.kotlin:kotlin-stdlib-jre7:$kotlin_version"
   implementation libraries.kotlinStdlibJre7
+  // support lib
   implementation libraries.supportAppcompatV7
   implementation libraries.supportDesign
   implementation libraries.constraintLayout
+  // timber
   implementation libraries.timber
   implementation libraries.mosby3
+  // dagger
   implementation libraries.dagger2
   implementation libraries.dagger2Android
   implementation libraries.dagger2AndroidSupport
   kapt libraries.dagger2Compiler
   kapt libraries.dagger2AndroidCompiler
+  // architecture components
   implementation libraries.archComponentRoom
   kapt libraries.archComponentRoomCompiler
   implementation libraries.archComponentRxJava2
+  implementation libraries.arch_lifecycle_extensions
+  // epoxy
   implementation libraries.epoxy
   kapt libraries.epoxyCompiler
+  // rxjava
   implementation libraries.rxAndroid2
   implementation libraries.rxJava2
+  // rxbinding
   implementation libraries.rxBindingRecyclerKotlin
   implementation libraries.flexbox
+  // stetho
   implementation libraries.stetho
-
+  // rxrelay
+  implementation libraries.rxrelay
+  // leakcanary
   debugImplementation libraries.leakCanary
+
 
   testImplementation 'junit:junit:4.12'
   testImplementation libraries.archComponentRoomTest

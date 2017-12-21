@@ -9,9 +9,7 @@ import dagger.Module
  * @author littlegnal
  * @date 2017/8/24
  */
-@Module
 abstract class AddOrEditActivityModule {
 
-  @Binds
   abstract fun provideAddOrEditActivity(addOrEditActivity: AddOrEditActivity): AddOrEditNavigator
 }

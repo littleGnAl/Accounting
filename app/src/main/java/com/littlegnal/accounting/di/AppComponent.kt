@@ -5,16 +5,17 @@ import com.littlegnal.accounting.App
 import dagger.BindsInstance
 import dagger.Component
 import dagger.android.AndroidInjectionModule
+import javax.inject.Singleton
 
 /**
  * @author littlegnal
  * @date 2017/8/8
  */
-@AppRoot
-@Component(modules = arrayOf(
+@Singleton
+@Component(modules = [
     AndroidInjectionModule::class,
     AppModule::class,
-    ActivityModule::class))
+    ActivityModule::class])
 interface AppComponent {
 
   @Component.Builder

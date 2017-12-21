@@ -17,9 +17,9 @@ abstract class ActivityModule {
   @ContributesAndroidInjector(modules = arrayOf(MainActivityModule::class))
   abstract fun contributeMainActivity(): MainActivity
 
-  @ActivityScope
-  @ContributesAndroidInjector(modules = arrayOf(AddOrEditActivityModule::class))
-  abstract fun contributeAddOrEditActivity(): AddOrEditActivity
+//  @ActivityScope
+//  @ContributesAndroidInjector(modules = arrayOf(AddOrEditActivityModule::class))
+//  abstract fun contributeAddOrEditActivity(): AddOrEditActivity
 
   @ActivityScope
   @ContributesAndroidInjector

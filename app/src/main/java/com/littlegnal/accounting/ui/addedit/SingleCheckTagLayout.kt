@@ -8,6 +8,7 @@ import android.util.TypedValue
 import android.view.Gravity
 import com.google.android.flexbox.FlexWrap
 import com.google.android.flexbox.FlexboxLayout
+import com.jakewharton.rxrelay2.PublishRelay
 import com.littlegnal.accounting.R
 import com.littlegnal.accounting.base.util.dip
 import io.reactivex.Observable
@@ -21,7 +22,9 @@ class SingleCheckTagLayout : FlexboxLayout {
 
   private var preCheckedTag: AppCompatCheckedTextView? = null
 
-  private val tagNamePublisher: PublishSubject<String> = PublishSubject.create()
+  private val tagNamePublisher: PublishRelay<String> = PublishRelay.create()
+
+  private lateinit var checkedTagName: String
 
   constructor(context: Context) : super(context)
 
@@ -57,7 +60,8 @@ class SingleCheckTagLayout : FlexboxLayout {
       tagView.setOnClickListener {
         preCheckedTag?.toggle()
         (it as AppCompatCheckedTextView).toggle()
-        tagNamePublisher.onNext(it.text.toString())
+        checkedTagName = it.text.toString()
+        tagNamePublisher.accept(checkedTagName)
         preCheckedTag = it
       }
 
@@ -65,7 +69,9 @@ class SingleCheckTagLayout : FlexboxLayout {
     }
   }
 
-  fun getCheckedTagName(): Observable<String> = tagNamePublisher
+  fun checkedTagNameObservable(): Observable<String> = tagNamePublisher
+
+  fun getCheckedTagName(): String = checkedTagName
 
   fun selectTag(tagName: String) {
     (0 until childCount)
@@ -75,7 +81,8 @@ class SingleCheckTagLayout : FlexboxLayout {
         .filter { tagName == it.text }
         .forEach {
           it.isChecked = true
-          tagNamePublisher.onNext(it.text.toString())
+          checkedTagName = it.text.toString()
+          tagNamePublisher.accept(checkedTagName)
         }
   }
 }

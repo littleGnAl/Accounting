@@ -3,16 +3,21 @@ package com.littlegnal.accounting.ui.addedit
 import android.app.Activity
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import android.arch.lifecycle.ViewModelProvider
+import android.arch.lifecycle.ViewModelProviders
 import android.content.Intent
 import android.os.Bundle
 import com.jakewharton.rxbinding2.view.RxView
 import com.jakewharton.rxbinding2.widget.RxTextView
 import com.littlegnal.accounting.R
-import com.littlegnal.accounting.base.mvi.BaseMviActivity
+import com.littlegnal.accounting.base.BaseActivity
+import com.littlegnal.accounting.base.mvibase.MviView
+import com.yunmai.scale.coach.common.extensions.plusAssign
+import com.yunmai.scale.coach.common.extensions.toast
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
+import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.disposables.Disposable
-import io.reactivex.functions.BiFunction
 import io.reactivex.functions.Function3
 import io.reactivex.subjects.PublishSubject
 import kotlinx.android.synthetic.main.activity_add_or_edit.*
@@ -25,11 +30,10 @@ import javax.inject.Inject
  * @author littlegnal
  * @date 2017/8/24
  */
-class AddOrEditActivity :
-    BaseMviActivity<AddOrEditView, AddOrEditPresenter>(), AddOrEditView, AddOrEditNavigator {
+class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditViewState> {
 
-  @Inject
-  lateinit var addOrEditPresenter: AddOrEditPresenter
+  @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
+  lateinit var addOrEditViewModel: AddOrEditViewModel
 
   private lateinit var showDate: String
 
@@ -40,14 +44,16 @@ class AddOrEditActivity :
 
   private lateinit var enableConfirmDisposable: Disposable
 
-  private var accountingId: Int? = ADD
+  private var accountingId: Int? = null
+
+  private val disposables = CompositeDisposable()
 
   override fun onCreate(savedInstanceState: Bundle?) {
     super.onCreate(savedInstanceState)
     setContentView(R.layout.activity_add_or_edit)
     setToolbarWithBack()
 
-    accountingId = intent?.getIntExtra(ACCOUNTING_ID_KEY, ADD)
+    accountingId = intent?.getIntExtra(ACCOUNTING_ID_KEY, ADD).let { if (it == ADD) null else it }
 
     title = if (accountingId == ADD) {
       getString(R.string.add_or_edit_add_title)
@@ -56,6 +62,7 @@ class AddOrEditActivity :
     }
 
     tv_add_or_edit_date_value.setOnClickListener {
+      hideSoftKeyboard()
       datePicker()
     }
 
@@ -65,7 +72,7 @@ class AddOrEditActivity :
     }
 
     saveOrUpdateConfirmObservable = RxView.clicks(btn_add_or_edit_confirm)
-        .share()
+        .throttleFirst(300, TimeUnit.MILLISECONDS)
         .map { true }
 
     inputPayObservable = RxTextView.textChanges(et_add_or_edit_pay_value)
@@ -74,7 +81,7 @@ class AddOrEditActivity :
 
     val enableConfirmBtn: Observable<Boolean> = Observable.combineLatest(
         inputPayObservable,
-        fbl_tag_container.getCheckedTagName(),
+        fbl_tag_container.checkedTagNameObservable(),
         selectedDateAndTimePublisher,
         Function3 { pay, tagName, dateTime ->
           pay.isNotEmpty() && tagName.isNotEmpty() && dateTime.isNotEmpty()
@@ -85,43 +92,69 @@ class AddOrEditActivity :
             .subscribe {
               btn_add_or_edit_confirm.isEnabled = it
             }
+
+    bind()
   }
 
-  override fun createPresenter(): AddOrEditPresenter {
-    return addOrEditPresenter
+  private fun bind() {
+    addOrEditViewModel = ViewModelProviders.of(this, viewModelFactory)
+        .get(AddOrEditViewModel::class.java)
+
+    disposables += addOrEditViewModel.states().subscribe(this::render)
+    addOrEditViewModel.processIntents(intents())
   }
 
-  override fun loadDataIntent(): Observable<Int> {
-    return Observable.just(accountingId)
+  override fun intents(): Observable<AddOrEditIntent> =
+      Observable.merge(initialIntent(), createOrUpdateIntent())
+
+  private fun initialIntent(): Observable<AddOrEditIntent> {
+    return Observable.just(AddOrEditIntent.InitialIntent(accountingId))
   }
 
-  override fun saveOrUpdateIntent(): Observable<Array<String>> {
-    return Observable.combineLatest(
-        saveOrUpdateConfirmObservable.throttleFirst(300, TimeUnit.MILLISECONDS),
-        fbl_tag_container.getCheckedTagName(),
-        BiFunction { _, tagName ->
-          arrayOf(
-              accountingId.toString(),
-              et_add_or_edit_pay_value.text.toString(),
-              tagName,
-              showDate,
-              et_add_or_edit_remarks.text.toString())
-        })
-  }
+  private fun createOrUpdateIntent(): Observable<AddOrEditIntent> =
+      RxView.clicks(btn_add_or_edit_confirm)
+          .throttleFirst(300, TimeUnit.MILLISECONDS)
+          .map {
+            AddOrEditIntent.CreateOrUpdateIntent(
+                accountingId,
+                et_add_or_edit_pay_value.text.toString().toFloat(),
+                fbl_tag_container.getCheckedTagName(),
+                showDate,
+                et_add_or_edit_remarks.text.toString())
+          }
 
-  override fun render(viewState: AddOrEditViewState) {
-    renderDataState(viewState)
-  }
+//      Observable.combineLatest(
+//          saveOrUpdateConfirmObservable,
+//          fbl_tag_container.getCheckedTagName(),
+//          selectedDateAndTimePublisher,
+//          Function3 { _, tagName, selectedDate ->
+//            AddOrEditIntent.CreateOrUpdateIntent(
+//                accountingId,
+//                et_add_or_edit_pay_value.text.toString().toFloat(),
+//                tagName,
+//                selectedDate,
+//                et_add_or_edit_remarks.text.toString())
+//          })
 
-  private fun renderDataState(vs: AddOrEditViewState) {
-    vs.amount?.apply { et_add_or_edit_pay_value.setText(this) }
-    vs.tagName?.apply { fbl_tag_container.selectTag(this) }
-    vs.dateTime?.apply {
+  override fun render(state: AddOrEditViewState) {
+    if (state.isNeedFinish) {
+      finish()
+      return
+    }
+
+    if (state.error != null) {
+      toast(state.error.message.toString())
+      return
+    }
+
+    state.amount?.apply { et_add_or_edit_pay_value.setText(this) }
+    state.tagName?.apply { fbl_tag_container.selectTag(this) }
+    state.dateTime?.apply {
       tv_add_or_edit_date_value.text = this
       selectedDateAndTimePublisher.onNext(this)
       showDate = this
     }
-    vs.remarks?.apply { et_add_or_edit_remarks.setText(this) }
+    state.remarks?.apply { et_add_or_edit_remarks.setText(this) }
   }
 
   private fun datePicker() {
@@ -141,7 +174,7 @@ class AddOrEditActivity :
 
   private fun timePicker() {
     val c = Calendar.getInstance()
-    val timePickerDialog = TimePickerDialog(
+    TimePickerDialog(
         this,
         TimePickerDialog.OnTimeSetListener { _, hourOfDay, minute ->
           showDate += " $hourOfDay:$minute"
@@ -150,14 +183,14 @@ class AddOrEditActivity :
         },
         c.get(Calendar.HOUR_OF_DAY),
         c.get(Calendar.MINUTE),
-        true)
-    timePickerDialog.show()
+        true).run { show() }
   }
 
   override fun onDestroy() {
     super.onDestroy()
 
     enableConfirmDisposable.dispose()
+    disposables.dispose()
   }
 
   companion object {
