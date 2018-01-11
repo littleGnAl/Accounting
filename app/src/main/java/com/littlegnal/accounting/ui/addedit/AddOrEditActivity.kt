@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2017 littlegnal
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.littlegnal.accounting.ui.addedit
 
 import android.app.Activity
@@ -11,13 +27,15 @@ import com.jakewharton.rxbinding2.view.RxView
 import com.jakewharton.rxbinding2.widget.RxTextView
 import com.littlegnal.accounting.R
 import com.littlegnal.accounting.base.BaseActivity
-import com.littlegnal.accounting.base.mvibase.MviView
-import com.yunmai.scale.coach.common.extensions.plusAssign
-import com.yunmai.scale.coach.common.extensions.toast
+import com.littlegnal.accounting.base.mvi.MviIntent
+import com.littlegnal.accounting.base.mvi.MviView
+import com.littlegnal.accounting.base.mvi.MviViewModel
+import com.littlegnal.accounting.base.mvi.MviViewState
+import com.littlegnal.accounting.base.util.plusAssign
+import com.littlegnal.accounting.base.util.toast
 import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
-import io.reactivex.disposables.Disposable
 import io.reactivex.functions.Function3
 import io.reactivex.subjects.PublishSubject
 import kotlinx.android.synthetic.main.activity_add_or_edit.*
@@ -27,8 +45,7 @@ import javax.inject.Inject
 
 
 /**
- * @author littlegnal
- * @date 2017/8/24
+ * 增加或修改页面
  */
 class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditViewState> {
 
@@ -42,8 +59,6 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
   private lateinit var saveOrUpdateConfirmObservable: Observable<Boolean>
   private lateinit var inputPayObservable: Observable<String>
 
-  private lateinit var enableConfirmDisposable: Disposable
-
   private var accountingId: Int? = null
 
   private val disposables = CompositeDisposable()
@@ -53,13 +68,12 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
     setContentView(R.layout.activity_add_or_edit)
     setToolbarWithBack()
 
-    accountingId = intent?.getIntExtra(ACCOUNTING_ID_KEY, ADD).let { if (it == ADD) null else it }
-
-    title = if (accountingId == ADD) {
-      getString(R.string.add_or_edit_add_title)
-    } else {
-      getString(R.string.add_or_edit_edit_title)
+    accountingId = intent?.getIntExtra(ACCOUNTING_ID_KEY, -1).let {
+      if (it == -1) null else it
     }
+
+    title = accountingId?.let { getString(R.string.add_or_edit_edit_title) } ?:
+        getString(R.string.add_or_edit_add_title)
 
     tv_add_or_edit_date_value.setOnClickListener {
       hideSoftKeyboard()
@@ -79,6 +93,7 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
         .map { it.toString() }
         .share()
 
+    // 只有输入金额，选择tag，选择时间后才允许点击确认按钮
     val enableConfirmBtn: Observable<Boolean> = Observable.combineLatest(
         inputPayObservable,
         fbl_tag_container.checkedTagNameObservable(),
@@ -86,8 +101,7 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
         Function3 { pay, tagName, dateTime ->
           pay.isNotEmpty() && tagName.isNotEmpty() && dateTime.isNotEmpty()
         })
-    enableConfirmDisposable =
-        enableConfirmBtn
+    disposables += enableConfirmBtn
             .observeOn(AndroidSchedulers.mainThread())
             .subscribe {
               btn_add_or_edit_confirm.isEnabled = it
@@ -96,11 +110,17 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
     bind()
   }
 
+  /**
+   * 连接[MviView]和[MviViewModel]，需要在传送[MviIntent]s之前让[MviViewModel]订阅[MviView.render]方法，
+   * 否则会丢失[MviViewState]s
+   */
   private fun bind() {
     addOrEditViewModel = ViewModelProviders.of(this, viewModelFactory)
         .get(AddOrEditViewModel::class.java)
 
+    // 订阅render方法根据发送过来的state渲染界面
     disposables += addOrEditViewModel.states().subscribe(this::render)
+    // 传递UI的intents给ViewModel
     addOrEditViewModel.processIntents(intents())
   }
 
@@ -122,19 +142,6 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
                 showDate,
                 et_add_or_edit_remarks.text.toString())
           }
-
-//      Observable.combineLatest(
-//          saveOrUpdateConfirmObservable,
-//          fbl_tag_container.getCheckedTagName(),
-//          selectedDateAndTimePublisher,
-//          Function3 { _, tagName, selectedDate ->
-//            AddOrEditIntent.CreateOrUpdateIntent(
-//                accountingId,
-//                et_add_or_edit_pay_value.text.toString().toFloat(),
-//                tagName,
-//                selectedDate,
-//                et_add_or_edit_remarks.text.toString())
-//          })
 
   override fun render(state: AddOrEditViewState) {
     if (state.isNeedFinish) {
@@ -189,13 +196,11 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
   override fun onDestroy() {
     super.onDestroy()
 
-    enableConfirmDisposable.dispose()
     disposables.dispose()
   }
 
   companion object {
     val ACCOUNTING_ID_KEY = "ACCOUNTING_ID_KEY"
-    val ADD = -1
 
     fun add(activity: Activity) {
       addOrEdit(activity)
@@ -205,7 +210,7 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
       addOrEdit(activity, accountingId)
     }
 
-    private fun addOrEdit(activity: Activity, accountingId: Int = ADD) {
+    private fun addOrEdit(activity: Activity, accountingId: Int = -1) {
       val intent = Intent(activity, AddOrEditActivity::class.java)
       intent.putExtra(ACCOUNTING_ID_KEY, accountingId)
       activity.startActivity(intent)

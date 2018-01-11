@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2017 littlegnal
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.littlegnal.accounting.db
 
 import android.arch.persistence.room.Room
@@ -12,10 +28,6 @@ import org.junit.runner.RunWith
 import java.text.SimpleDateFormat
 import java.util.*
 
-/**
- * @author littlegnal
- * @date 2017/10/21
- */
 @RunWith(AndroidJUnit4::class)
 class AccountingDaoTest {
 
@@ -134,7 +146,6 @@ class AccountingDaoTest {
   fun test_queryPreviousAccounting() {
     val calendar = Calendar.getInstance()
     calendar.add(Calendar.MONTH, -1)
-    val date = Calendar.getInstance().apply {  }
     val account1 = Accounting(
         100.0f,
         calendar.time,
@@ -178,7 +189,7 @@ class AccountingDaoTest {
 
     accountingDao.getGroupingMonthTotalAmountObservable(
         today.get(Calendar.YEAR).toString(),
-        (today.get(Calendar.MONTH) + 1).toString())
+        ensureNum2Length(today.get(Calendar.MONTH) + 1))
         .test()
         .assertValue { it.size == 2 && it.containsAll(listOf(tagTotal1, tagTotal2)) }
   }
@@ -206,7 +217,7 @@ class AccountingDaoTest {
 
     val resultList = accountingDao.getGroupingMonthTotalAmount(
         today.get(Calendar.YEAR).toString(),
-        (today.get(Calendar.MONTH) + 1).toString())
+        ensureNum2Length((today.get(Calendar.MONTH) + 1)))
 
     assertThat(resultList.size, Matchers.`is`(2))
     assertThat(resultList.containsAll(listOf(tagTotal1, tagTotal2)), Matchers.`is`(true))
@@ -240,6 +251,14 @@ class AccountingDaoTest {
   }
 
   companion object {
+
+    private fun ensureNum2Length(num: Int): String =
+        if (num < 10) {
+          "0$num"
+        } else {
+          num.toString()
+        }
+
     private val ONE_DAY_FORMAT: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd")
     private val YEAR_MONTH_FORMAT: SimpleDateFormat = SimpleDateFormat("yyyy-MM")
   }

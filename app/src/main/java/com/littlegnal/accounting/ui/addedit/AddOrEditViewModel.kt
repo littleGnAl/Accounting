@@ -1,19 +1,32 @@
+/*
+ * Copyright (C) 2017 littlegnal
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.littlegnal.accounting.ui.addedit
 
 import com.littlegnal.accounting.base.eventbus.RxBus
-import com.littlegnal.accounting.base.mvibase.BaseViewModel
-import com.littlegnal.accounting.base.mvibase.LceStatus
+import com.littlegnal.accounting.base.mvi.*
 import com.littlegnal.accounting.db.Accounting
 import io.reactivex.Observable
 import io.reactivex.ObservableTransformer
 import io.reactivex.functions.BiFunction
 import io.reactivex.subjects.PublishSubject
-import timber.log.Timber
 import javax.inject.Inject
 
 /**
- * @author littlegnal
- * @date 2017/12/16
+ * 增加或修改页面[MviViewModel]
  */
 class AddOrEditViewModel @Inject constructor(
     private val addOrEditActionProcessorHolder: AddOrEditActionProcessorHolder,
@@ -32,6 +45,10 @@ class AddOrEditViewModel @Inject constructor(
         .autoConnect(0)
   }
 
+  /**
+   * 只取一次初始化[MviIntent]和其他[MviIntent]，过滤掉配置改变（如屏幕旋转）后重新传递过来的初始化
+   * [MviIntent]，导致重新加载数据
+   */
   private val intentFilter: ObservableTransformer<AddOrEditIntent, AddOrEditIntent> =
       ObservableTransformer { intents -> intents.publish { shared ->
         Observable.merge(
@@ -40,32 +57,44 @@ class AddOrEditViewModel @Inject constructor(
         }
       }
 
+  /**
+   * 把[MviIntent]转换为[MviAction]
+   */
   private fun actionFromIntent(intent: AddOrEditIntent): AddOrEditAction =
       when(intent) {
-        is AddOrEditIntent.InitialIntent ->
-          if (intent.accountingId == null)
+        is AddOrEditIntent.InitialIntent -> {
+          if (intent.accountingId == null) {
             AddOrEditAction.SkipAction()
-          else
+          } else {
             AddOrEditAction.LoadAccountingAction(intent.accountingId)
-        is AddOrEditIntent.CreateOrUpdateIntent ->
-          if (intent.accountingId == null)
+          }
+        }
+
+        is AddOrEditIntent.CreateOrUpdateIntent -> {
+          if (intent.accountingId == null) {
             AddOrEditAction.CreateAccountingAction(
                 intent.amount,
                 intent.tagName,
                 intent.showDate,
                 intent.remarks)
-          else
+          } else {
             AddOrEditAction.UpdateAccountingAction(
                 intent.accountingId,
                 intent.amount,
                 intent.tagName,
                 intent.showDate,
                 intent.remarks)
+          }
+        }
+
       }
 
+  /**
+   * 使用最后一次缓存的[MviViewState]和最新的[MviResult]来创建新的[MviViewState]，通过[MviView.render]方法
+   * 把新的[MviViewState]渲染到界面
+   */
   private val reducer: BiFunction<AddOrEditViewState, AddOrEditResult, AddOrEditViewState> =
       BiFunction { previousState, result ->
-        Timber.e("AddOrEdit reducer thread name: ${Thread.currentThread().name}")
         when(result) {
           is AddOrEditResult.LoadAccountingResult -> {
             when(result.status) {
@@ -78,7 +107,7 @@ class AddOrEditViewModel @Inject constructor(
                     tagName = accounting?.tagName,
                     dateTime = addOrEditActionProcessorHolder.formatDate(accounting?.createTime),
                     remarks = accounting?.remarks,
-                    isNeedFinish = true)
+                    isNeedFinish = false)
               }
               LceStatus.FAILURE ->
                 previousState.copy(isLoading = false, error = result.error, isNeedFinish = false)
@@ -90,6 +119,9 @@ class AddOrEditViewModel @Inject constructor(
           is AddOrEditResult.CreateAccountingResult -> {
             when(result.status) {
               LceStatus.SUCCESS -> {
+                result.accounting?.also {
+                  rxBus.send(AddOrEditEvent(result is AddOrEditResult.CreateAccountingResult, it))
+                }
                 previousState.copy(isLoading = false, error = null, isNeedFinish = true)
               }
               LceStatus.FAILURE ->

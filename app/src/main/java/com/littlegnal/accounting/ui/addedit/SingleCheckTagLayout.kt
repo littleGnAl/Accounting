@@ -1,3 +1,19 @@
+/*
+ * Copyright (C) 2017 littlegnal
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.littlegnal.accounting.ui.addedit
 
 import android.content.Context
@@ -12,11 +28,9 @@ import com.jakewharton.rxrelay2.PublishRelay
 import com.littlegnal.accounting.R
 import com.littlegnal.accounting.base.util.dip
 import io.reactivex.Observable
-import io.reactivex.subjects.PublishSubject
 
 /**
- * @author littlegnal
- * @date 2017/8/27
+ * 标签列表[FlexboxLayout]
  */
 class SingleCheckTagLayout : FlexboxLayout {
 
@@ -69,10 +83,23 @@ class SingleCheckTagLayout : FlexboxLayout {
     }
   }
 
+  /**
+   * 已选择标签[Observable]
+   */
   fun checkedTagNameObservable(): Observable<String> = tagNamePublisher
 
+  /**
+   * 获取已选择的标签名
+   *
+   * @return 已选择的标签名
+   */
   fun getCheckedTagName(): String = checkedTagName
 
+  /**
+   * 根据标签名称，设置标签为选中状态
+   *
+   * @param tagName 标签名称
+   */
   fun selectTag(tagName: String) {
     (0 until childCount)
         .map { getChildAt(it) }

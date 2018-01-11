@@ -3,8 +3,9 @@ package com.littlegnal.accounting.db
 import android.arch.persistence.room.ColumnInfo
 
 /**
- * @author littlegnal
- * @date 2017/10/9
+ * 月汇总数据库实体
+ *
+ * @see [AccountingDao.getMonthTotalAmount]
  */
 data class MonthTotal(
     @ColumnInfo(name = "year_month") var yearAndMonth: String,

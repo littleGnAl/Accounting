@@ -1,5 +1,22 @@
+/*
+ * Copyright (C) 2017 littlegnal
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.littlegnal.accounting.ui.summary
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.graphics.*
 import android.util.AttributeSet
@@ -14,8 +31,7 @@ import io.reactivex.subjects.PublishSubject
 import java.util.*
 
 /**
- * @author littlegnal
- * @date 2017/10/3
+ * 汇总曲线控件
  */
 class SummaryChart : View {
 
@@ -79,6 +95,12 @@ class SummaryChart : View {
           color = context.colorRes(R.color.colorAccent)
         }
   }
+
+  private var activePointerId: Int = -1
+  private var lastDownX: Float = -1.0f
+  private var lastDownY: Float = -1.0f
+  private var touchSlop: Int = -1
+  private var isMoved: Boolean = false
 
   private val TOUCH_RADIUS = dip(20)
 
@@ -229,13 +251,7 @@ class SummaryChart : View {
     }
   }
 
-
-  private var activePointerId: Int = -1
-  private var lastDownX: Float = -1.0f
-  private var lastDownY: Float = -1.0f
-  private var touchSlop: Int = -1
-  private var isMoved: Boolean = false
-
+  @SuppressLint("ClickableViewAccessibility")
   override fun onTouchEvent(event: MotionEvent?): Boolean {
     when(event?.actionMasked) {
       MotionEvent.ACTION_DOWN -> {

@@ -1,27 +1,49 @@
+/*
+ * Copyright (C) 2017 littlegnal
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 package com.littlegnal.accounting.ui.summary
 
 import android.app.Activity
+import android.arch.lifecycle.ViewModelProvider
+import android.arch.lifecycle.ViewModelProviders
 import android.content.Intent
 import android.os.Bundle
 import android.support.v7.widget.LinearLayoutManager
 import com.littlegnal.accounting.R
+import com.littlegnal.accounting.base.BaseActivity
 import com.littlegnal.accounting.base.DefaultItemDecoration
-import com.littlegnal.accounting.base.mvi.BaseMviActivity
+import com.littlegnal.accounting.base.mvi.MviView
+import com.littlegnal.accounting.base.util.plusAssign
+import com.littlegnal.accounting.base.util.toast
 import com.littlegnal.accounting.ui.summary.adapter.SummaryListController
 import com.littlegnal.accounting.ui.summary.adapter.SummaryListItemModel
 import io.reactivex.Observable
+import io.reactivex.disposables.CompositeDisposable
 import kotlinx.android.synthetic.main.activity_summary.*
-import java.util.*
 import javax.inject.Inject
 
 /**
- * @author littlegnal
- * @date 2017/9/26
+ * 记帐记录汇总页面
  */
-class SummaryActivity : BaseMviActivity<SummaryView, SummaryPresenter>(), SummaryView {
+class SummaryActivity : BaseActivity(), MviView<SummaryIntent, SummaryViewState> {
 
-  @Inject
-  lateinit var summaryPresenter: SummaryPresenter
+  @Inject lateinit var viewModelFactory: ViewModelProvider.Factory
+  private lateinit var summaryViewModel: SummaryViewModel
+
+  private val disposables = CompositeDisposable()
 
   private lateinit var summaryListController: SummaryListController
 
@@ -37,41 +59,46 @@ class SummaryActivity : BaseMviActivity<SummaryView, SummaryPresenter>(), Summar
     rv_summary_list.addItemDecoration(
         DefaultItemDecoration(summaryListController.adapter) { it is SummaryListItemModel })
 
+    bind()
   }
 
-  override fun loadDataIntent(): Observable<Boolean> {
-    return Observable.just(true)
+  private fun bind() {
+    summaryViewModel = ViewModelProviders.of(this, viewModelFactory)
+        .get(SummaryViewModel::class.java)
+
+    disposables += summaryViewModel.states().subscribe(this::render)
+    summaryViewModel.processIntents(intents())
   }
 
-  override fun monthClickedIntent(): Observable<Date> {
+  private fun initialIntent(): Observable<SummaryIntent> {
+    return Observable.just(SummaryIntent.InitialIntent())
+  }
+
+  private fun switchMonthIntent(): Observable<SummaryIntent> {
     // 点击曲线图的点
     return cv_summary_chart.getMonthClickedObservable()
+        .map { SummaryIntent.SwitchMonthIntent(it) }
   }
 
-  override fun render(viewState: SummaryViewState) {
-    // 根据不同的State来展示界面
-    when(viewState) {
-      is SummaryViewState.SummaryDataViewState -> renderDataState(viewState)
-      is SummaryViewState.SummaryGroupingTagViewState -> renderGroupingTagState(viewState)
+  override fun render(state: SummaryViewState) {
+    if (state.error != null) {
+      toast(state.error.toString())
+      return
     }
-  }
-
-  private fun renderGroupingTagState(vs: SummaryViewState.SummaryGroupingTagViewState) {
-    summaryListController.setData(vs.summaryItemList)
-  }
-
-  private fun renderDataState(vs: SummaryViewState.SummaryDataViewState) {
-    // 曲线图赋值
-    cv_summary_chart.points = vs.points
-    cv_summary_chart.months = vs.months
-    cv_summary_chart.values = vs.values
-    cv_summary_chart.selectedIndex = vs.selectedIndex
-    cv_summary_chart.postInvalidate()
     // 标签汇总列表赋值
-    summaryListController.setData(vs.summaryItemList)
+    summaryListController.setData(state.summaryItemList)
+    if (state.isSwitchMonth) return
+    // 曲线图赋值
+    cv_summary_chart.points = state.points
+    cv_summary_chart.months = state.months
+    cv_summary_chart.values = state.values
+    cv_summary_chart.selectedIndex = state.selectedIndex
+    cv_summary_chart.postInvalidate()
   }
 
-  override fun createPresenter(): SummaryPresenter = summaryPresenter
+  override fun intents(): Observable<SummaryIntent> {
+    return Observable.merge(initialIntent(), switchMonthIntent())
+  }
 
   companion object {
     fun go(activity: Activity) {
