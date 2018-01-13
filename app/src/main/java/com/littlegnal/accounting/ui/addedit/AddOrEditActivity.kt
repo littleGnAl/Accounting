@@ -154,7 +154,10 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
       return
     }
 
-    state.amount?.apply { et_add_or_edit_pay_value.setText(this) }
+    state.amount?.apply {
+      et_add_or_edit_pay_value.setText(this)
+      et_add_or_edit_pay_value.setSelection(this.length)
+    }
     state.tagName?.apply { fbl_tag_container.selectTag(this) }
     state.dateTime?.apply {
       tv_add_or_edit_date_value.text = this

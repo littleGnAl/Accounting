@@ -66,7 +66,9 @@ class SummaryActivity : BaseActivity(), MviView<SummaryIntent, SummaryViewState>
     summaryViewModel = ViewModelProviders.of(this, viewModelFactory)
         .get(SummaryViewModel::class.java)
 
+    // 订阅render方法根据发送过来的state渲染界面
     disposables += summaryViewModel.states().subscribe(this::render)
+    // 传递UI的intents给ViewModel
     summaryViewModel.processIntents(intents())
   }
 

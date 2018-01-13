@@ -18,8 +18,11 @@
       </intent-filter>
     </activity>
 
-    <activity android:name=".ui.addedit.AddOrEditActivity"/>
-    <activity android:name=".ui.summary.SummaryActivity"/>
+    <activity
+        android:name=".ui.addedit.AddOrEditActivity"
+        android:theme="@style/AddOrEditTheme"
+        />
+    <activity android:name=".ui.summary.SummaryActivity" android:theme="@style/SummaryTheme"/>
   </application>
 
 </manifest>

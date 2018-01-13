@@ -117,7 +117,9 @@ class MainActivity : BaseActivity(), MviView<MainIntent, MainViewState> {
   private fun bind() {
     mainViewModel = ViewModelProviders.of(this, viewModelFactory)
         .get(MainViewModel::class.java)
+    // 订阅render方法根据发送过来的state渲染界面
     disposables += mainViewModel.states().subscribe(this::render)
+    // 传递UI的intents给ViewModel
     mainViewModel.processIntents(intents())
   }
 
