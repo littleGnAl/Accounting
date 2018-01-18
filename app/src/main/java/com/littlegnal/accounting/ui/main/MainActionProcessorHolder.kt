@@ -243,7 +243,7 @@ class MainActionProcessorHolder(
         previousState.copy(
             error = null,
             isLoading = false,
-            accountingDetailList = newAdapterList,
+            accountingDetailList = it,
             isNoMoreData = accountingList.size < ONE_PAGE_SIZE,
             isNoData = false)
       }

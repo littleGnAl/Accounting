@@ -38,8 +38,7 @@ sealed class SummaryResult {
           values: List<String>,
           selectedIndex: Int,
           summaryItemList: List<SummaryListItem>
-      ): InitialResult =
-          InitialResult(
+      ): InitialResult = InitialResult(
               LceStatus.SUCCESS,
               null,
               points,
@@ -48,8 +47,7 @@ sealed class SummaryResult {
               selectedIndex,
               summaryItemList)
 
-      fun failure(error: Throwable) =
-          InitialResult(
+      fun failure(error: Throwable) = InitialResult(
               LceStatus.FAILURE,
               error,
               listOf(),
@@ -58,8 +56,7 @@ sealed class SummaryResult {
               0,
               listOf())
 
-      fun inFlight() =
-          InitialResult(
+      fun inFlight() = InitialResult(
               LceStatus.IN_FLIGHT,
               null,
               listOf(),

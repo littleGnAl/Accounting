@@ -35,14 +35,6 @@ data class SummaryViewState(
     /**
      * 初始[SummaryViewState]用于Reducer
      */
-    fun idle() = SummaryViewState(
-            false,
-            null,
-            listOf(),
-            listOf(),
-            listOf(),
-            0,
-            listOf(),
-            false)
+    fun idle() = SummaryViewState(false, null, listOf(), listOf(), listOf(), 0, listOf(), false)
   }
 }
