@@ -28,13 +28,17 @@ import com.littlegnal.accounting.base.util.dip
  * 项目中默认的[RecyclerView.ItemDecoration]，使用[isDrawableDividerItem]方法来控制是否绘制分割线
  */
 class DefaultItemDecoration(
-    private val epoxyControllerAdapter: EpoxyControllerAdapter,
-    private val isDrawableDividerItem: (EpoxyModel<*>) -> Boolean
+  private val epoxyControllerAdapter: EpoxyControllerAdapter,
+  private val isDrawableDividerItem: (EpoxyModel<*>) -> Boolean
 ) : RecyclerView.ItemDecoration() {
-  
+
   private val divider: ColorDrawable = ColorDrawable(0xfff3f3f3.toInt())
 
-  override fun onDrawOver(c: Canvas?, parent: RecyclerView?, state: RecyclerView.State?) {
+  override fun onDrawOver(
+    c: Canvas?,
+    parent: RecyclerView?,
+    state: RecyclerView.State?
+  ) {
     val childCount: Int? = parent?.childCount
     for (i in 0 until childCount!!) {
       val child: View = parent.getChildAt(i)
@@ -47,7 +51,8 @@ class DefaultItemDecoration(
               parent.dip(16),
               child.bottom,
               parent.width,
-              child.bottom + parent.dip(1))
+              child.bottom + parent.dip(1)
+          )
           divider.draw(c)
           c?.restore()
         }

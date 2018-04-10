@@ -18,69 +18,72 @@ package com.littlegnal.accounting.ui.summary
 
 import com.littlegnal.accounting.base.mvi.LceStatus
 import com.littlegnal.accounting.ui.summary.adapter.SummaryListItem
-import java.util.*
+import java.util.Date
 
 sealed class SummaryResult {
 
   data class InitialResult(
-      val status: LceStatus,
-      val error: Throwable?,
-      val points: List<Pair<Int, Float>>,
-      val months: List<Pair<String, Date>>,
-      val values: List<String>,
-      val selectedIndex: Int,
-      val summaryItemList: List<SummaryListItem>
+    val status: LceStatus,
+    val error: Throwable?,
+    val points: List<Pair<Int, Float>>,
+    val months: List<Pair<String, Date>>,
+    val values: List<String>,
+    val selectedIndex: Int,
+    val summaryItemList: List<SummaryListItem>
   ) : SummaryResult() {
     companion object {
       fun success(
-          points: List<Pair<Int, Float>>,
-          months: List<Pair<String, Date>>,
-          values: List<String>,
-          selectedIndex: Int,
-          summaryItemList: List<SummaryListItem>
+        points: List<Pair<Int, Float>>,
+        months: List<Pair<String, Date>>,
+        values: List<String>,
+        selectedIndex: Int,
+        summaryItemList: List<SummaryListItem>
       ): InitialResult = InitialResult(
-              LceStatus.SUCCESS,
-              null,
-              points,
-              months,
-              values,
-              selectedIndex,
-              summaryItemList)
+          LceStatus.SUCCESS,
+          null,
+          points,
+          months,
+          values,
+          selectedIndex,
+          summaryItemList
+      )
 
       fun failure(error: Throwable) = InitialResult(
-              LceStatus.FAILURE,
-              error,
-              listOf(),
-              listOf(),
-              listOf(),
-              0,
-              listOf())
+          LceStatus.FAILURE,
+          error,
+          listOf(),
+          listOf(),
+          listOf(),
+          0,
+          listOf()
+      )
 
       fun inFlight() = InitialResult(
-              LceStatus.IN_FLIGHT,
-              null,
-              listOf(),
-              listOf(),
-              listOf(),
-              0,
-              listOf())
+          LceStatus.IN_FLIGHT,
+          null,
+          listOf(),
+          listOf(),
+          listOf(),
+          0,
+          listOf()
+      )
     }
   }
 
   data class SwitchMonthResult(
-      val status: LceStatus,
-      val error: Throwable?,
-      val summaryItemList: List<SummaryListItem>
+    val status: LceStatus,
+    val error: Throwable?,
+    val summaryItemList: List<SummaryListItem>
   ) : SummaryResult() {
     companion object {
       fun success(summaryItemList: List<SummaryListItem>) =
-          SwitchMonthResult(LceStatus.SUCCESS, null, summaryItemList)
+        SwitchMonthResult(LceStatus.SUCCESS, null, summaryItemList)
 
       fun failure(error: Throwable) =
-          SwitchMonthResult(LceStatus.FAILURE, error, listOf())
+        SwitchMonthResult(LceStatus.FAILURE, error, listOf())
 
       fun inFlight() =
-          SwitchMonthResult(LceStatus.IN_FLIGHT, null, listOf())
+        SwitchMonthResult(LceStatus.IN_FLIGHT, null, listOf())
     }
   }
 }

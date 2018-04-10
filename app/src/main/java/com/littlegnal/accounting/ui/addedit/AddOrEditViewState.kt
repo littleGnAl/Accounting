@@ -18,18 +18,17 @@ package com.littlegnal.accounting.ui.addedit
 
 import com.littlegnal.accounting.base.mvi.MviViewState
 
-
 /**
  * 增加或修改页面状态
  */
 data class AddOrEditViewState(
-    val isLoading: Boolean, // 是否正在加载
-    val error: Throwable?, // 错误信息
-    val amount: String? = null, // 金额
-    val tagName: String? = null, // 标签
-    val dateTime: String? = null, // 日期时间
-    val remarks: String? = null, // 备注
-    val isNeedFinish: Boolean = false // 是否需要关闭页面
+  val isLoading: Boolean, // 是否正在加载
+  val error: Throwable?, // 错误信息
+  val amount: String? = null, // 金额
+  val tagName: String? = null, // 标签
+  val dateTime: String? = null, // 日期时间
+  val remarks: String? = null, // 备注
+  val isNeedFinish: Boolean = false // 是否需要关闭页面
 ) : MviViewState {
   companion object {
 

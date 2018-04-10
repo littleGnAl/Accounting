@@ -17,7 +17,14 @@
 package com.littlegnal.accounting.ui.addedit
 
 import com.littlegnal.accounting.base.eventbus.RxBus
-import com.littlegnal.accounting.base.mvi.*
+import com.littlegnal.accounting.base.mvi.BaseViewModel
+import com.littlegnal.accounting.base.mvi.LceStatus
+import com.littlegnal.accounting.base.mvi.MviAction
+import com.littlegnal.accounting.base.mvi.MviIntent
+import com.littlegnal.accounting.base.mvi.MviResult
+import com.littlegnal.accounting.base.mvi.MviView
+import com.littlegnal.accounting.base.mvi.MviViewModel
+import com.littlegnal.accounting.base.mvi.MviViewState
 import com.littlegnal.accounting.db.Accounting
 import io.reactivex.Observable
 import io.reactivex.ObservableTransformer
@@ -29,8 +36,8 @@ import javax.inject.Inject
  * 增加或修改页面[MviViewModel]
  */
 class AddOrEditViewModel @Inject constructor(
-    private val addOrEditActionProcessorHolder: AddOrEditActionProcessorHolder,
-    private val rxBus: RxBus
+  private val addOrEditActionProcessorHolder: AddOrEditActionProcessorHolder,
+  private val rxBus: RxBus
 ) : BaseViewModel<AddOrEditIntent, AddOrEditViewState>() {
 
   override fun compose(intentsSubject: PublishSubject<AddOrEditIntent>):
@@ -50,87 +57,89 @@ class AddOrEditViewModel @Inject constructor(
    * [MviIntent]，导致重新加载数据
    */
   private val intentFilter: ObservableTransformer<AddOrEditIntent, AddOrEditIntent> =
-      ObservableTransformer { intents -> intents.publish { shared ->
+    ObservableTransformer { intents ->
+      intents.publish { shared ->
         Observable.merge(
             shared.ofType(AddOrEditIntent.InitialIntent::class.java).take(1),
-            shared.filter { it !is AddOrEditIntent.InitialIntent } )
-        }
+            shared.filter { it !is AddOrEditIntent.InitialIntent })
       }
+    }
 
   /**
    * 把[MviIntent]转换为[MviAction]
    */
   private fun actionFromIntent(intent: AddOrEditIntent): AddOrEditAction =
-      when(intent) {
-        is AddOrEditIntent.InitialIntent -> {
-          if (intent.accountingId == null) {
-            AddOrEditAction.SkipAction()
-          } else {
-            AddOrEditAction.LoadAccountingAction(intent.accountingId)
-          }
+    when (intent) {
+      is AddOrEditIntent.InitialIntent -> {
+        if (intent.accountingId == null) {
+          AddOrEditAction.SkipAction()
+        } else {
+          AddOrEditAction.LoadAccountingAction(intent.accountingId)
         }
-
-        is AddOrEditIntent.CreateOrUpdateIntent -> {
-          if (intent.accountingId == null) {
-            AddOrEditAction.CreateAccountingAction(
-                intent.amount,
-                intent.tagName,
-                intent.showDate,
-                intent.remarks)
-          } else {
-            AddOrEditAction.UpdateAccountingAction(
-                intent.accountingId,
-                intent.amount,
-                intent.tagName,
-                intent.showDate,
-                intent.remarks)
-          }
-        }
-
       }
+
+      is AddOrEditIntent.CreateOrUpdateIntent -> {
+        if (intent.accountingId == null) {
+          AddOrEditAction.CreateAccountingAction(
+              intent.amount,
+              intent.tagName,
+              intent.showDate,
+              intent.remarks
+          )
+        } else {
+          AddOrEditAction.UpdateAccountingAction(
+              intent.accountingId,
+              intent.amount,
+              intent.tagName,
+              intent.showDate,
+              intent.remarks
+          )
+        }
+      }
+    }
 
   /**
    * 使用最后一次缓存的[MviViewState]和最新的[MviResult]来创建新的[MviViewState]，通过[MviView.render]方法
    * 把新的[MviViewState]渲染到界面
    */
   private val reducer: BiFunction<AddOrEditViewState, AddOrEditResult, AddOrEditViewState> =
-      BiFunction { previousState, result ->
-        when(result) {
-          is AddOrEditResult.LoadAccountingResult -> {
-            when(result.status) {
-              LceStatus.SUCCESS -> {
-                val accounting: Accounting? = result.accounting
-                previousState.copy(
-                    isLoading = false,
-                    error = null,
-                    amount = accounting?.amount.toString(),
-                    tagName = accounting?.tagName,
-                    dateTime = addOrEditActionProcessorHolder.formatDate(accounting?.createTime),
-                    remarks = accounting?.remarks,
-                    isNeedFinish = false)
-              }
-              LceStatus.FAILURE ->
-                previousState.copy(isLoading = false, error = result.error, isNeedFinish = false)
-              LceStatus.IN_FLIGHT ->
-                previousState.copy(isLoading = true, error = null, isNeedFinish = false)
+    BiFunction { previousState, result ->
+      when (result) {
+        is AddOrEditResult.LoadAccountingResult -> {
+          when (result.status) {
+            LceStatus.SUCCESS -> {
+              val accounting: Accounting? = result.accounting
+              previousState.copy(
+                  isLoading = false,
+                  error = null,
+                  amount = accounting?.amount.toString(),
+                  tagName = accounting?.tagName,
+                  dateTime = addOrEditActionProcessorHolder.formatDate(accounting?.createTime),
+                  remarks = accounting?.remarks,
+                  isNeedFinish = false
+              )
             }
+            LceStatus.FAILURE ->
+              previousState.copy(isLoading = false, error = result.error, isNeedFinish = false)
+            LceStatus.IN_FLIGHT ->
+              previousState.copy(isLoading = true, error = null, isNeedFinish = false)
           }
-          is AddOrEditResult.UpdateAccountingResult,
-          is AddOrEditResult.CreateAccountingResult -> {
-            when(result.status) {
-              LceStatus.SUCCESS -> {
-                result.accounting?.also {
-                  rxBus.send(AddOrEditEvent(result is AddOrEditResult.CreateAccountingResult, it))
-                }
-                previousState.copy(isLoading = false, error = null, isNeedFinish = true)
+        }
+        is AddOrEditResult.UpdateAccountingResult,
+        is AddOrEditResult.CreateAccountingResult -> {
+          when (result.status) {
+            LceStatus.SUCCESS -> {
+              result.accounting?.also {
+                rxBus.send(AddOrEditEvent(result is AddOrEditResult.CreateAccountingResult, it))
               }
-              LceStatus.FAILURE ->
-                previousState.copy(isLoading = false, error = result.error, isNeedFinish = false)
-              LceStatus.IN_FLIGHT ->
-                previousState.copy(isLoading = true, error = null, isNeedFinish = false)
+              previousState.copy(isLoading = false, error = null, isNeedFinish = true)
             }
+            LceStatus.FAILURE ->
+              previousState.copy(isLoading = false, error = result.error, isNeedFinish = false)
+            LceStatus.IN_FLIGHT ->
+              previousState.copy(isLoading = true, error = null, isNeedFinish = false)
           }
         }
       }
-
+    }
 }

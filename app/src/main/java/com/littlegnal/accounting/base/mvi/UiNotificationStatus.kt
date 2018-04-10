@@ -22,5 +22,6 @@ package com.littlegnal.accounting.base.mvi
  * * [NONE] : 不显示
  */
 enum class UiNotificationStatus {
-  SHOW, NONE
+  SHOW,
+  NONE
 }

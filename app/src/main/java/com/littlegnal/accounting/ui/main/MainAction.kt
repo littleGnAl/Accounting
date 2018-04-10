@@ -18,7 +18,7 @@ package com.littlegnal.accounting.ui.main
 
 import com.littlegnal.accounting.base.mvi.MviAction
 import com.littlegnal.accounting.db.Accounting
-import java.util.*
+import java.util.Date
 
 sealed class MainAction : MviAction {
 

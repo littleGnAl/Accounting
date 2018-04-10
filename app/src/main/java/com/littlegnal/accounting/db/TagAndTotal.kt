@@ -25,5 +25,6 @@ import android.arch.persistence.room.ColumnInfo
  * @see [AccountingDao.getGroupingMonthTotalAmount]
  */
 data class TagAndTotal(
-    @ColumnInfo(name = "tag_name") var tagName: String,
-    @ColumnInfo(name = "total") var total: Float)
+  @ColumnInfo(name = "tag_name") var tagName: String,
+  @ColumnInfo(name = "total") var total: Float
+)

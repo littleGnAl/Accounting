@@ -44,7 +44,9 @@ import io.reactivex.Observable
 import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.subjects.PublishSubject
-import kotlinx.android.synthetic.main.activity_main.*
+import kotlinx.android.synthetic.main.activity_main.fab_main_add_accounting
+import kotlinx.android.synthetic.main.activity_main.rv_main_detail
+import kotlinx.android.synthetic.main.activity_main.tv_main_accounting_no_data
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
 
@@ -118,7 +120,8 @@ class MainActivity : BaseActivity(), MviView<MainIntent, MainViewState> {
     mainViewModel = ViewModelProviders.of(this, viewModelFactory)
         .get(MainViewModel::class.java)
     // 订阅render方法根据发送过来的state渲染界面
-    disposables += mainViewModel.states().subscribe(this::render)
+    disposables += mainViewModel.states()
+        .subscribe(this::render)
     // 传递UI的intents给ViewModel
     mainViewModel.processIntents(intents())
   }
@@ -155,19 +158,22 @@ class MainActivity : BaseActivity(), MviView<MainIntent, MainViewState> {
         .filter { !accountingDetailController.isNoMoreData }
         .filter { !accountingDetailController.isLoadingMore }
         .filter { it == RecyclerView.SCROLL_STATE_IDLE }
-        .filter { layoutManager.findLastCompletelyVisibleItemPosition() ==
-            accountingDetailController.adapter.itemCount - 1 }
+        .filter {
+          layoutManager.findLastCompletelyVisibleItemPosition() ==
+              accountingDetailController.adapter.itemCount - 1
+        }
         .map {
-          accountingDetailController.accountingDetailList.lastOrNull()?.let {
-            MainIntent.LoadNextPageIntent((it as MainAccountingDetailContent).createTime)
-          }
+          accountingDetailController.accountingDetailList.lastOrNull()
+              ?.let {
+                MainIntent.LoadNextPageIntent((it as MainAccountingDetailContent).createTime)
+              }
         }
   }
 
   private fun deleteAccountingIntent(): Observable<MainIntent> =
-      deleteItemPublisher.map {
-        MainIntent.DeleteAccountingIntent(it)
-      }
+    deleteItemPublisher.map {
+      MainIntent.DeleteAccountingIntent(it)
+    }
 
   override fun render(state: MainViewState) {
     accountingDetailController.setData(state.accountingDetailList, state.isLoading)
@@ -187,7 +193,6 @@ class MainActivity : BaseActivity(), MviView<MainIntent, MainViewState> {
       }
       invalidateOptionsMenu()
     }
-
   }
 
   override fun onDestroy() {

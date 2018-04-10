@@ -23,7 +23,8 @@ import javax.inject.Singleton
 
 @Singleton
 class RxBus {
-  private val bus = PublishRelay.create<Any>().toSerialized()
+  private val bus = PublishRelay.create<Any>()
+      .toSerialized()
 
   fun send(o: Any) {
     bus.accept(o)

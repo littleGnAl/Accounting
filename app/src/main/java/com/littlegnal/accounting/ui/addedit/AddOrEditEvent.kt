@@ -21,4 +21,7 @@ import com.littlegnal.accounting.db.Accounting
 /**
  * 增加或者修改记帐记录通知事件
  */
-data class AddOrEditEvent(val isAddedAccounting: Boolean, val accounting: Accounting)
+data class AddOrEditEvent(
+  val isAddedAccounting: Boolean,
+  val accounting: Accounting
+)

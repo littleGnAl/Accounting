@@ -16,12 +16,13 @@
 
 package com.littlegnal.accounting.ui.main.adapter
 
-import java.util.*
+import java.util.Date
 
 data class MainAccountingDetailContent(
-    val id: Int,
-    val amount: String,
-    val tagName: String,
-    val remarks: String?,
-    val time: String,
-    val createTime: Date) : MainAccountingDetail
+  val id: Int,
+  val amount: String,
+  val tagName: String,
+  val remarks: String?,
+  val time: String,
+  val createTime: Date
+) : MainAccountingDetail

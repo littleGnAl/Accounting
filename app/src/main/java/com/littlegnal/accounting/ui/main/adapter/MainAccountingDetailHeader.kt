@@ -16,4 +16,7 @@
 
 package com.littlegnal.accounting.ui.main.adapter
 
-data class MainAccountingDetailHeader(var title: String, var total: String) : MainAccountingDetail
+data class MainAccountingDetailHeader(
+  var title: String,
+  var total: String
+) : MainAccountingDetail

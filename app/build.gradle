@@ -44,7 +44,31 @@ android {
   androidExtensions {
     experimental = true
   }
+}
 
+configurations {
+  ktlint
+}
+
+task ktlint(type: JavaExec, group: LifecycleBasePlugin.VERIFICATION_GROUP) {
+  inputs.dir('src')
+  outputs.dir('src')
+
+  description = "Check Kotlin code style."
+  classpath = configurations.ktlint
+  main = 'com.github.shyiko.ktlint.Main'
+  args '--android', 'src/**/*.kt'
+}
+check.dependsOn ktlint
+
+task ktFormat(type: JavaExec, group: 'formatting') {
+  inputs.dir('src')
+  outputs.dir('src')
+
+  description = 'Fix Kotlin code style deviations.'
+  classpath = configurations.ktlint
+  main = 'com.github.shyiko.ktlint.Main'
+  args '--android', '-F', 'src/**/*.kt'
 }
 
 dependencies {
@@ -83,6 +107,8 @@ dependencies {
   // leakcanary
   debugImplementation libraries.leakCanary
 
+  ktlint libraries.ktlint
+
   testImplementation test.junit
   testImplementation test.archComponentRoomTest
   testImplementation test.archComponentCoreTest
@@ -94,6 +120,4 @@ dependencies {
   androidTestImplementation test.archComponentRoomTest
   androidTestImplementation test.archComponentCoreTest
   androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.0'
-
-
 }

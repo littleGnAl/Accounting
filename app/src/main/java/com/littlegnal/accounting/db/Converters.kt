@@ -17,7 +17,7 @@
 package com.littlegnal.accounting.db
 
 import android.arch.persistence.room.TypeConverter
-import java.util.*
+import java.util.Date
 
 class Converters {
 

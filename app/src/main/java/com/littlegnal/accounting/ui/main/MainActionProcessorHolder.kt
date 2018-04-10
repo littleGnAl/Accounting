@@ -19,7 +19,11 @@ package com.littlegnal.accounting.ui.main
 import android.annotation.SuppressLint
 import android.content.Context
 import com.littlegnal.accounting.R
-import com.littlegnal.accounting.base.mvi.*
+import com.littlegnal.accounting.base.mvi.LceStatus
+import com.littlegnal.accounting.base.mvi.MviAction
+import com.littlegnal.accounting.base.mvi.MviResult
+import com.littlegnal.accounting.base.mvi.MviView
+import com.littlegnal.accounting.base.mvi.MviViewState
 import com.littlegnal.accounting.base.schedulers.BaseSchedulerProvider
 import com.littlegnal.accounting.db.Accounting
 import com.littlegnal.accounting.db.AccountingDao
@@ -31,7 +35,7 @@ import io.reactivex.ObservableTransformer
 import io.reactivex.functions.BiFunction
 import timber.log.Timber
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Date
 
 const val ONE_PAGE_SIZE = 15
 
@@ -43,9 +47,10 @@ const val ONE_PAGE_SIZE = 15
  * @see actionProcessorWithReducer
  */
 class MainActionProcessorHolder(
-    private val schedulerProvider: BaseSchedulerProvider,
-    private val applicationContext: Context,
-    private val accountingDao: AccountingDao) {
+  private val schedulerProvider: BaseSchedulerProvider,
+  private val applicationContext: Context,
+  private val accountingDao: AccountingDao
+) {
 
   @SuppressLint("SimpleDateFormat")
   private val dateNumFormat: SimpleDateFormat = SimpleDateFormat("yyyyMMdd")
@@ -61,7 +66,8 @@ class MainActionProcessorHolder(
         accounting.tagName,
         accounting.remarks,
         timeFormat.format(accounting.createTime),
-        accounting.createTime)
+        accounting.createTime
+    )
   }
 
   private fun createHeaderTitle(createTime: Date): String = oneDayFormat.format(createTime)
@@ -70,20 +76,24 @@ class MainActionProcessorHolder(
     val title: String = createHeaderTitle(createTime)
     val sum = accountingDao.sumOfDay(oneDayFormat.format(createTime))
     val sumString: String = applicationContext.getString(
-        R.string.main_accounting_detail_header_sum, sum)
+        R.string.main_accounting_detail_header_sum, sum
+    )
     return MainAccountingDetailHeader(title, sumString)
   }
 
   private fun createAccountingDetailList(
-      lastDate: Date,
-      accountingList: List<Accounting>): MutableList<MainAccountingDetail> {
-    var lastDateNum: Int = dateNumFormat.format(lastDate).toInt()
+    lastDate: Date,
+    accountingList: List<Accounting>
+  ): MutableList<MainAccountingDetail> {
+    var lastDateNum: Int = dateNumFormat.format(lastDate)
+        .toInt()
 
     val detailList: MutableList<MainAccountingDetail> = mutableListOf()
 
     for (accounting in accountingList) {
       val createTime = accounting.createTime
-      val accountingDateNum: Int = dateNumFormat.format(createTime).toInt()
+      val accountingDateNum: Int = dateNumFormat.format(createTime)
+          .toInt()
       if (accountingDateNum != lastDateNum) {
         detailList.add(createHeader(createTime))
         lastDateNum = accountingDateNum
@@ -96,8 +106,8 @@ class MainActionProcessorHolder(
   }
 
   private fun createFirstPageList(
-      lastDate: Date,
-      accountingList: List<Accounting>
+    lastDate: Date,
+    accountingList: List<Accounting>
   ): List<MainAccountingDetail> {
     if (accountingList.isEmpty()) return listOf()
     val accountingDetailList = createAccountingDetailList(lastDate, accountingList)
@@ -110,68 +120,78 @@ class MainActionProcessorHolder(
   }
 
   private val loadAccountingsProcessor =
-      ObservableTransformer<MainAction.LoadAccountingsAction, MainResult.LoadAccountingsResult> {
-        actions -> actions.flatMap { action ->
-          accountingDao.queryPreviousAccounting(action.lastDate, ONE_PAGE_SIZE.toLong())
-              .toObservable()
-              .map { MainResult.LoadAccountingsResult.success(action.lastDate, it) }
-              .onErrorReturn {
-                Timber.e(it)
-                MainResult.LoadAccountingsResult.failure(it)
-              }
-              .subscribeOn(schedulerProvider.io())
-              .startWith(MainResult.LoadAccountingsResult.inFlight())
-        }
+    ObservableTransformer<
+        MainAction.LoadAccountingsAction,
+        MainResult.LoadAccountingsResult> { actions ->
+      actions.flatMap { action ->
+        accountingDao.queryPreviousAccounting(action.lastDate, ONE_PAGE_SIZE.toLong())
+            .toObservable()
+            .map { MainResult.LoadAccountingsResult.success(action.lastDate, it) }
+            .onErrorReturn {
+              Timber.e(it)
+              MainResult.LoadAccountingsResult.failure(it)
+            }
+            .subscribeOn(schedulerProvider.io())
+            .startWith(MainResult.LoadAccountingsResult.inFlight())
       }
+    }
 
   private fun findAndUpdateHeader(
-      list: MutableList<MainAccountingDetail>,
-      addOrUpdateIndex: Int) {
+    list: MutableList<MainAccountingDetail>,
+    addOrUpdateIndex: Int
+  ) {
     list.indexOfLast { it is MainAccountingDetailHeader && list.indexOf(it) < addOrUpdateIndex }
         .apply {
           val createTime = (list[addOrUpdateIndex] as MainAccountingDetailContent).createTime
           val sum = accountingDao.sumOfDay(oneDayFormat.format(createTime))
           val sumString: String = applicationContext.getString(
-              R.string.main_accounting_detail_header_sum, sum)
+              R.string.main_accounting_detail_header_sum, sum
+          )
           list[this] = (list[this] as MainAccountingDetailHeader).copy(total = sumString)
         }
   }
 
   private val deleteAccountingProcessor =
-      ObservableTransformer<MainAction.DeleteAccountingAction, MainResult.DeleteAccountingResult> {
-        actions -> actions.flatMap { action ->
-          Observable.fromCallable {
-            accountingDao.deleteAccountingById(action.deletedId)
-            MainResult.DeleteAccountingResult.success(action.deletedId)
-          }
-          .onErrorReturn {
-            Timber.e(it)
-            MainResult.DeleteAccountingResult.failure(it)
-          }
-          .subscribeOn(schedulerProvider.io())
-          .startWith(MainResult.DeleteAccountingResult.inFlight())
+    ObservableTransformer<
+        MainAction.DeleteAccountingAction,
+        MainResult.DeleteAccountingResult> { actions ->
+      actions.flatMap { action ->
+        Observable.fromCallable {
+          accountingDao.deleteAccountingById(action.deletedId)
+          MainResult.DeleteAccountingResult.success(action.deletedId)
         }
+            .onErrorReturn {
+              Timber.e(it)
+              MainResult.DeleteAccountingResult.failure(it)
+            }
+            .subscribeOn(schedulerProvider.io())
+            .startWith(MainResult.DeleteAccountingResult.inFlight())
       }
+    }
 
   private val addAccountingProcessor =
-      ObservableTransformer<MainAction.AddAccountingAction, MainResult.AddAccountingResult> {
-        actions -> actions.flatMap {
-          Observable.fromCallable {
-            MainResult.AddAccountingResult.success(it.accounting)
-          }
-          .subscribeOn(schedulerProvider.io())
+    ObservableTransformer<
+        MainAction.AddAccountingAction,
+        MainResult.AddAccountingResult> { actions ->
+      actions.flatMap {
+        Observable.fromCallable {
+          MainResult.AddAccountingResult.success(it.accounting)
         }
-  }
+            .subscribeOn(schedulerProvider.io())
+      }
+    }
 
   private val updateAccountingProcessor =
-      ObservableTransformer<MainAction.UpdateAccountingAction, MainResult.UpdateAccountingResult> {
-        actions -> actions.flatMap {
-          Observable.fromCallable {
-            MainResult.UpdateAccountingResult.success(it.accounting)
-          }
-          .subscribeOn(schedulerProvider.io())
+    ObservableTransformer<
+        MainAction.UpdateAccountingAction,
+        MainResult.UpdateAccountingResult> { actions ->
+      actions.flatMap {
+        Observable.fromCallable {
+          MainResult.UpdateAccountingResult.success(it.accounting)
         }
+            .subscribeOn(schedulerProvider.io())
       }
+    }
 
   /**
    * /**
@@ -184,34 +204,41 @@ class MainActionProcessorHolder(
    * 为了防止遗漏[MviAction]未处理，在流的最后合并一个错误检测，方便维护
   */
    */
-  val actionProcessorWithReducer = ObservableTransformer<MainAction, MainViewState> {
-    actions -> actions.publish {
-      shared -> Observable.merge(listOf(
-          shared.ofType(MainAction.LoadAccountingsAction::class.java)
-              .compose(loadAccountingsProcessor),
-          shared.ofType(MainAction.DeleteAccountingAction::class.java)
-              .compose(deleteAccountingProcessor),
-          shared.ofType(MainAction.AddAccountingAction::class.java).compose(addAccountingProcessor),
-          shared.ofType(MainAction.UpdateAccountingAction::class.java)
-              .compose(updateAccountingProcessor)
-        ))
-        .mergeWith(shared.filter {
-              it !is MainAction.LoadAccountingsAction &&
-                  it !is MainAction.DeleteAccountingAction &&
-                  it !is MainAction.AddAccountingAction &&
-                  it !is MainAction.UpdateAccountingAction
-            }
-            .flatMap {
-              Observable.error<MainResult>(
-                  IllegalArgumentException("Unknown Action type: $it"))
-            })
-        .scan(MainViewState.idle(), reducer).observeOn(schedulerProvider.ui())
+  val actionProcessorWithReducer = ObservableTransformer<MainAction, MainViewState> { actions ->
+    actions.publish { shared ->
+      Observable.merge(
+          listOf(
+              shared.ofType(MainAction.LoadAccountingsAction::class.java)
+                  .compose(loadAccountingsProcessor),
+              shared.ofType(MainAction.DeleteAccountingAction::class.java)
+                  .compose(deleteAccountingProcessor),
+              shared.ofType(MainAction.AddAccountingAction::class.java).compose(
+                  addAccountingProcessor
+              ),
+              shared.ofType(MainAction.UpdateAccountingAction::class.java)
+                  .compose(updateAccountingProcessor)
+          )
+      )
+          .mergeWith(shared.filter {
+            it !is MainAction.LoadAccountingsAction &&
+                it !is MainAction.DeleteAccountingAction &&
+                it !is MainAction.AddAccountingAction &&
+                it !is MainAction.UpdateAccountingAction
+          }
+              .flatMap {
+                Observable.error<MainResult>(
+                    IllegalArgumentException("Unknown Action type: $it")
+                )
+              })
+          .scan(MainViewState.idle(), reducer)
+          .observeOn(schedulerProvider.ui())
     }
   }
 
   private fun createLoadAccountingsViewState(
-      previousState: MainViewState,
-      result: MainResult.LoadAccountingsResult): MainViewState {
+    previousState: MainViewState,
+    result: MainResult.LoadAccountingsResult
+  ): MainViewState {
     val accountingList = result.accountingList
     val lastDate = result.lastDate
     val newAdapterList = previousState.accountingDetailList.toMutableList()
@@ -239,20 +266,23 @@ class MainActionProcessorHolder(
         }
 
         ""
-      }.let {
-        previousState.copy(
-            error = null,
-            isLoading = false,
-            accountingDetailList = it,
-            isNoMoreData = accountingList.size < ONE_PAGE_SIZE,
-            isNoData = false)
       }
+          .let {
+            previousState.copy(
+                error = null,
+                isLoading = false,
+                accountingDetailList = it,
+                isNoMoreData = accountingList.size < ONE_PAGE_SIZE,
+                isNoData = false
+            )
+          }
     }
   }
 
   private fun createDeleteAccountingViewState(
-      previousState: MainViewState,
-      result: MainResult.DeleteAccountingResult): MainViewState {
+    previousState: MainViewState,
+    result: MainResult.DeleteAccountingResult
+  ): MainViewState {
     val newAccountingList = previousState.accountingDetailList.toMutableList()
 
     val deleteContentIndex: Int = newAccountingList.indexOfLast {
@@ -262,19 +292,22 @@ class MainActionProcessorHolder(
     // 当天只有一条数据的时候把头部也删掉
     var headerIndex = -1
     if (deleteContentIndex > 0 &&
-        newAccountingList[deleteContentIndex - 1] is MainAccountingDetailHeader) {
+        newAccountingList[deleteContentIndex - 1] is MainAccountingDetailHeader
+    ) {
       headerIndex = deleteContentIndex - 1
     }
 
     var nextHeaderIndex = -1
     if (deleteContentIndex + 1 <= newAccountingList.size - 1 &&
-        newAccountingList[deleteContentIndex + 1] is MainAccountingDetailHeader) {
+        newAccountingList[deleteContentIndex + 1] is MainAccountingDetailHeader
+    ) {
       nextHeaderIndex = deleteContentIndex + 1
     }
 
-    if (((nextHeaderIndex == -1 && deleteContentIndex == newAccountingList.size - 1)
-        && headerIndex != -1)
-        || (headerIndex != -1 && nextHeaderIndex != -1)) {
+    if (((nextHeaderIndex == -1 && deleteContentIndex == newAccountingList.size - 1) &&
+            headerIndex != -1) ||
+        (headerIndex != -1 && nextHeaderIndex != -1)
+    ) {
       newAccountingList.removeAt(deleteContentIndex)
       newAccountingList.removeAt(headerIndex)
     } else {
@@ -285,12 +318,14 @@ class MainActionProcessorHolder(
     return previousState.copy(
         isLoading = false,
         error = null,
-        accountingDetailList = newAccountingList)
+        accountingDetailList = newAccountingList
+    )
   }
 
   private fun createAddAccountingViewState(
-      previousState: MainViewState,
-      result: MainResult.AddAccountingResult): MainViewState {
+    previousState: MainViewState,
+    result: MainResult.AddAccountingResult
+  ): MainViewState {
     val addOrEditAccounting = result.accounting
     val newContent = createDetailContent(addOrEditAccounting)
     val newAccountingList = previousState.accountingDetailList.toMutableList()
@@ -300,34 +335,37 @@ class MainActionProcessorHolder(
     } else {
       val title: String = createHeaderTitle(addOrEditAccounting.createTime)
       val header: MainAccountingDetailHeader =
-          newAccountingList[0] as MainAccountingDetailHeader
+        newAccountingList[0] as MainAccountingDetailHeader
 
       newAccountingList.indexOfFirst {
         it is MainAccountingDetailContent &&
             it.createTime <= addOrEditAccounting.createTime
-      }.apply {
-        // index为-1时表示找到了最后，所以下标直接赋值为newAccountingList.size
-        val insertIndex = if (this == -1) newAccountingList.size else this
-        if (title == header.title) {
-          newAccountingList.add(insertIndex, newContent)
-        } else {
-          val addedHeader = createHeader(addOrEditAccounting.createTime)
-          newAccountingList.add(insertIndex, newContent)
-          newAccountingList.add(insertIndex, addedHeader)
-        }
       }
+          .apply {
+            // index为-1时表示找到了最后，所以下标直接赋值为newAccountingList.size
+            val insertIndex = if (this == -1) newAccountingList.size else this
+            if (title == header.title) {
+              newAccountingList.add(insertIndex, newContent)
+            } else {
+              val addedHeader = createHeader(addOrEditAccounting.createTime)
+              newAccountingList.add(insertIndex, newContent)
+              newAccountingList.add(insertIndex, addedHeader)
+            }
+          }
     }
 
     return previousState.copy(
         isLoading = false,
         error = null,
         accountingDetailList = newAccountingList,
-        isNoData = false)
+        isNoData = false
+    )
   }
 
   private fun createUpdateAccountingViewState(
-      previousState: MainViewState,
-      result: MainResult.UpdateAccountingResult): MainViewState {
+    previousState: MainViewState,
+    result: MainResult.UpdateAccountingResult
+  ): MainViewState {
     val addOrEditAccounting = result.accounting
     val newContent = createDetailContent(addOrEditAccounting)
     val newAccountingList = previousState.accountingDetailList.toMutableList()
@@ -337,53 +375,79 @@ class MainActionProcessorHolder(
         .find { it.id == newContent.id }
 
     oldContent?.apply {
-      newAccountingList.indexOf(oldContent).apply {
-        findAndUpdateHeader(newAccountingList, this)
-        newAccountingList[this] = newContent
-      }
+      newAccountingList.indexOf(oldContent)
+          .apply {
+            findAndUpdateHeader(newAccountingList, this)
+            newAccountingList[this] = newContent
+          }
     }
 
     return previousState.copy(
         isLoading = false,
         error = null,
-        accountingDetailList = newAccountingList)
+        accountingDetailList = newAccountingList
+    )
   }
 
   /**
    * 使用最后一次缓存的[MviViewState]和最新的[MviResult]来创建新的[MviViewState]，通过[MviView.render]方法
    * 把新的[MviViewState]渲染到界面
    */
-  private val reducer = BiFunction<MainViewState, MainResult, MainViewState> {
-        previousState, result ->
-        when(result) {
-          is MainResult.LoadAccountingsResult -> {
-            when(result.status) {
-              LceStatus.SUCCESS -> { createLoadAccountingsViewState(previousState, result) }
-              LceStatus.FAILURE -> { previousState.copy(error = result.error, isLoading = false) }
-              LceStatus.IN_FLIGHT -> { previousState.copy(error = null, isLoading = true) }
+  private val reducer =
+    BiFunction<MainViewState, MainResult, MainViewState> { previousState, result ->
+      when (result) {
+        is MainResult.LoadAccountingsResult -> {
+          when (result.status) {
+            LceStatus.SUCCESS -> {
+              createLoadAccountingsViewState(previousState, result)
+            }
+            LceStatus.FAILURE -> {
+              previousState.copy(error = result.error, isLoading = false)
+            }
+            LceStatus.IN_FLIGHT -> {
+              previousState.copy(error = null, isLoading = true)
             }
           }
-          is MainResult.DeleteAccountingResult -> {
-            when(result.status) {
-              LceStatus.SUCCESS -> { createDeleteAccountingViewState(previousState, result) }
-              LceStatus.FAILURE -> { previousState.copy(isLoading = false, error = result.error) }
-              LceStatus.IN_FLIGHT -> { previousState.copy(isLoading = true, error = null) }
+        }
+        is MainResult.DeleteAccountingResult -> {
+          when (result.status) {
+            LceStatus.SUCCESS -> {
+              createDeleteAccountingViewState(previousState, result)
+            }
+            LceStatus.FAILURE -> {
+              previousState.copy(isLoading = false, error = result.error)
+            }
+            LceStatus.IN_FLIGHT -> {
+              previousState.copy(isLoading = true, error = null)
             }
           }
-          is MainResult.AddAccountingResult -> {
-            when(result.status) {
-              LceStatus.SUCCESS -> { createAddAccountingViewState(previousState, result) }
-              LceStatus.FAILURE -> { previousState.copy(isLoading = false, error = result.error) }
-              LceStatus.IN_FLIGHT -> { previousState.copy(isLoading = true, error = null) }
+        }
+        is MainResult.AddAccountingResult -> {
+          when (result.status) {
+            LceStatus.SUCCESS -> {
+              createAddAccountingViewState(previousState, result)
+            }
+            LceStatus.FAILURE -> {
+              previousState.copy(isLoading = false, error = result.error)
+            }
+            LceStatus.IN_FLIGHT -> {
+              previousState.copy(isLoading = true, error = null)
             }
           }
-          is MainResult.UpdateAccountingResult -> {
-            when(result.status) {
-              LceStatus.SUCCESS -> { createUpdateAccountingViewState(previousState, result) }
-              LceStatus.FAILURE -> { previousState.copy(isLoading = false, error = result.error) }
-              LceStatus.IN_FLIGHT -> { previousState.copy(isLoading = true, error = null) }
+        }
+        is MainResult.UpdateAccountingResult -> {
+          when (result.status) {
+            LceStatus.SUCCESS -> {
+              createUpdateAccountingViewState(previousState, result)
+            }
+            LceStatus.FAILURE -> {
+              previousState.copy(isLoading = false, error = result.error)
+            }
+            LceStatus.IN_FLIGHT -> {
+              previousState.copy(isLoading = true, error = null)
             }
           }
         }
       }
+    }
 }

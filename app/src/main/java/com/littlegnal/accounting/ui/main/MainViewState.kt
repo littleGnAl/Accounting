@@ -23,11 +23,11 @@ import com.littlegnal.accounting.ui.main.adapter.MainAccountingDetail
  * 主页[MviViewState]
  */
 data class MainViewState(
-    val error: Throwable?, // 错误信息
-    val isLoading: Boolean, // 是否正在加载
-    val accountingDetailList: List<MainAccountingDetail>, // 列表数据
-    val isNoData: Boolean = false, // 用于表示加载第一页的时候是否本地无数据
-    val isNoMoreData: Boolean // 用于表示加载下一页数据的时候是否已经没有更多数据
+  val error: Throwable?, // 错误信息
+  val isLoading: Boolean, // 是否正在加载
+  val accountingDetailList: List<MainAccountingDetail>, // 列表数据
+  val isNoData: Boolean = false, // 用于表示加载第一页的时候是否本地无数据
+  val isNoMoreData: Boolean // 用于表示加载下一页数据的时候是否已经没有更多数据
 ) : MviViewState {
   companion object {
 
@@ -39,8 +39,7 @@ data class MainViewState(
         false,
         listOf(),
         false,
-        false)
-
+        false
+    )
   }
 }
-

@@ -17,7 +17,7 @@
 package com.littlegnal.accounting.ui.summary
 
 import com.littlegnal.accounting.base.mvi.MviIntent
-import java.util.*
+import java.util.Date
 
 sealed class SummaryIntent : MviIntent {
 

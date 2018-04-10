@@ -16,7 +16,7 @@
 
 package com.littlegnal.accounting.ui.summary
 
-import java.util.*
+import java.util.Date
 
 sealed class SummaryAction {
 

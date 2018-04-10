@@ -44,8 +44,6 @@ abstract class SummaryListItemModel :
     override fun bindView(itemView: View?) {
       tag = itemView?.findViewById(R.id.tv_summary_list_item_tag)
       total = itemView?.findViewById(R.id.tv_summary_list_item_total)
-
     }
-
   }
 }

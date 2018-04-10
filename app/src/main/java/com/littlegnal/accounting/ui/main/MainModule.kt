@@ -27,10 +27,9 @@ class MainModule {
 
   @Provides
   fun provideMainActionProcessorHolder(
-      schedulerProvider: BaseSchedulerProvider,
-      applicationContext: Context,
-      accountingDao: AccountingDao
+    schedulerProvider: BaseSchedulerProvider,
+    applicationContext: Context,
+    accountingDao: AccountingDao
   ): MainActionProcessorHolder =
-      MainActionProcessorHolder(schedulerProvider, applicationContext, accountingDao)
-
+    MainActionProcessorHolder(schedulerProvider, applicationContext, accountingDao)
 }

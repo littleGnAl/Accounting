@@ -22,6 +22,10 @@ import android.widget.Toast
 /**
  * [Toast]扩展方法
  */
-fun Activity.toast(text: CharSequence, duration: Int = Toast.LENGTH_SHORT) {
-  Toast.makeText(this, text, duration).show()
+fun Activity.toast(
+  text: CharSequence,
+  duration: Int = Toast.LENGTH_SHORT
+) {
+  Toast.makeText(this, text, duration)
+      .show()
 }

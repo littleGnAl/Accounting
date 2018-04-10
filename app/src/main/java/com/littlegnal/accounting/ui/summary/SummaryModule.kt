@@ -27,9 +27,9 @@ class SummaryModule {
 
   @Provides
   fun provideSummaryActionProcessorHolder(
-      schedulerProvider: BaseSchedulerProvider,
-      applicationContext: Context,
-      accountingDao: AccountingDao
-  ): SummaryActionProcessorHolder  =
-      SummaryActionProcessorHolder(schedulerProvider, applicationContext, accountingDao)
+    schedulerProvider: BaseSchedulerProvider,
+    applicationContext: Context,
+    accountingDao: AccountingDao
+  ): SummaryActionProcessorHolder =
+    SummaryActionProcessorHolder(schedulerProvider, applicationContext, accountingDao)
 }

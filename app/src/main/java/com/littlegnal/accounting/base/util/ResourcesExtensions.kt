@@ -23,5 +23,6 @@ fun Context.colorRes(colorResId: Int): Int =
     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
       resources.getColor(colorResId, theme)
     } else {
+      @Suppress("DEPRECATION")
       resources.getColor(colorResId)
     }

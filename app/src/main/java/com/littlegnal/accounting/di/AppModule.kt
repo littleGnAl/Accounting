@@ -34,12 +34,14 @@ import dagger.Provides
 import io.reactivex.subjects.PublishSubject
 import javax.inject.Singleton
 
-@Module(includes = [
-  ViewModelModule::class,
-  AddOrEditBuilderModule::class,
-  SummaryBuilderModule::class,
-  MainBuilderModule::class
-])
+@Module(
+    includes = [
+      ViewModelModule::class,
+      AddOrEditBuilderModule::class,
+      SummaryBuilderModule::class,
+      MainBuilderModule::class
+    ]
+)
 class AppModule {
 
   @Singleton

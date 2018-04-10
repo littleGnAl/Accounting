@@ -25,10 +25,12 @@ import dagger.android.AndroidInjection
 class AppInjector {
   companion object {
     fun initDI(app: App) {
-      DaggerAppComponent.builder().application(app).build().inject(app)
+      DaggerAppComponent.builder()
+          .application(app)
+          .build()
+          .inject(app)
       app.registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
         override fun onActivityPaused(p0: Activity?) {
-
         }
 
         override fun onActivityResumed(p0: Activity?) {
@@ -40,13 +42,19 @@ class AppInjector {
         override fun onActivityDestroyed(p0: Activity?) {
         }
 
-        override fun onActivitySaveInstanceState(p0: Activity?, p1: Bundle?) {
+        override fun onActivitySaveInstanceState(
+          p0: Activity?,
+          p1: Bundle?
+        ) {
         }
 
         override fun onActivityStopped(p0: Activity?) {
         }
 
-        override fun onActivityCreated(activity: Activity?, bundle: Bundle?) {
+        override fun onActivityCreated(
+          activity: Activity?,
+          bundle: Bundle?
+        ) {
           AndroidInjection.inject(activity)
         }
       })

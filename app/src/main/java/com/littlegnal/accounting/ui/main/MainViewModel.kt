@@ -25,59 +25,63 @@ import com.littlegnal.accounting.ui.addedit.AddOrEditEvent
 import io.reactivex.Observable
 import io.reactivex.ObservableTransformer
 import io.reactivex.subjects.PublishSubject
-import java.util.*
+import java.util.Calendar
 import javax.inject.Inject
 
 /**
  * 主页[MainViewModel]
  */
 class MainViewModel @Inject constructor(
-    private val mainActionProcessorHolder: MainActionProcessorHolder,
-    private val rxBus: RxBus
+  private val mainActionProcessorHolder: MainActionProcessorHolder,
+  private val rxBus: RxBus
 ) : BaseViewModel<MainIntent, MainViewState>() {
 
   @VisibleForTesting
   val now: Calendar = Calendar.getInstance()
 
   override fun mergeExtraIntents(intents: Observable<MainIntent>): Observable<MainIntent> {
-    return super.mergeExtraIntents(intents).mergeWith(extraIntents())
+    return super.mergeExtraIntents(intents)
+        .mergeWith(extraIntents())
   }
 
-  private fun extraIntents(): Observable<MainIntent>  =
-      rxBus.asFlowable().toObservable()
-          .filter { it is AddOrEditEvent }
-          .map { it as AddOrEditEvent }
-          .map {
-            MainIntent.AddOrEditAccountingIntent(it.isAddedAccounting, it.accounting)
-          }
+  private fun extraIntents(): Observable<MainIntent> =
+    rxBus.asFlowable().toObservable()
+        .filter { it is AddOrEditEvent }
+        .map { it as AddOrEditEvent }
+        .map {
+          MainIntent.AddOrEditAccountingIntent(it.isAddedAccounting, it.accounting)
+        }
 
   override fun compose(intentsSubject: PublishSubject<MainIntent>): Observable<MainViewState> =
-      intentsSubject
-          .compose(intentFilter)
-          .map(this::actionFromIntent)
-          .compose(mainActionProcessorHolder.actionProcessorWithReducer)
-          .replay(1)
-          .autoConnect(0)
+    intentsSubject
+        .compose(intentFilter)
+        .map(this::actionFromIntent)
+        .compose(mainActionProcessorHolder.actionProcessorWithReducer)
+        .replay(1)
+        .autoConnect(0)
 
   /**
    * 只取一次初始化[MviIntent]和其他[MviIntent]，过滤掉配置改变（如屏幕旋转）后重新传递过来的初始化
    * [MviIntent]，导致重新加载数据
    */
   private val intentFilter: ObservableTransformer<MainIntent, MainIntent> =
-      ObservableTransformer { intents -> intents.publish { shared ->
-          Observable.merge(
-              shared.ofType(MainIntent.InitialIntent::class.java).take(1),
-              shared.filter { it !is MainIntent.InitialIntent }
-          )
-        }
+    ObservableTransformer { intents ->
+      intents.publish { shared ->
+        Observable.merge(
+            shared.ofType(MainIntent.InitialIntent::class.java).take(1),
+            shared.filter { it !is MainIntent.InitialIntent }
+        )
       }
+    }
 
   /**
    * 把[MviIntent]转换为[MviAction]
    */
   private fun actionFromIntent(mainIntent: MainIntent): MainAction {
-    return when(mainIntent) {
-      is MainIntent.InitialIntent -> { MainAction.LoadAccountingsAction(now.time) }
+    return when (mainIntent) {
+      is MainIntent.InitialIntent -> {
+        MainAction.LoadAccountingsAction(now.time)
+      }
       is MainIntent.LoadNextPageIntent -> {
         MainAction.LoadAccountingsAction(mainIntent.lastDate)
       }
@@ -93,5 +97,4 @@ class MainViewModel @Inject constructor(
       }
     }
   }
-
 }

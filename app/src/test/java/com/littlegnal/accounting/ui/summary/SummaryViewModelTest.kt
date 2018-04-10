@@ -32,7 +32,9 @@ import org.mockito.Mock
 import org.mockito.Mockito.`when`
 import org.mockito.MockitoAnnotations
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
 class SummaryViewModelTest {
 
@@ -51,8 +53,10 @@ class SummaryViewModelTest {
     MockitoAnnotations.initMocks(this)
 
     summaryViewModel = SummaryViewModel(
-        SummaryActionProcessorHolder(TestSchedulerProvider(), applicationContext, accountingDao))
-    testObserver = summaryViewModel.states().test()
+        SummaryActionProcessorHolder(TestSchedulerProvider(), applicationContext, accountingDao)
+    )
+    testObserver = summaryViewModel.states()
+        .test()
   }
 
   @Test
@@ -61,20 +65,25 @@ class SummaryViewModelTest {
     val points: MutableList<Pair<Int, Float>> = mutableListOf()
     val values: MutableList<String> = mutableListOf()
 
-    val today = Calendar.getInstance().apply {
-      set(Calendar.DAY_OF_MONTH, 1)
-      set(Calendar.HOUR, 0)
-      set(Calendar.MINUTE, 0)
-      set(Calendar.SECOND, 0)
-      set(Calendar.MILLISECOND, 0)
-    }
-    val latestCalendar = Calendar.getInstance().apply { time = today.time }
+    val today = Calendar.getInstance()
+        .apply {
+          set(Calendar.DAY_OF_MONTH, 1)
+          set(Calendar.HOUR, 0)
+          set(Calendar.MINUTE, 0)
+          set(Calendar.SECOND, 0)
+          set(Calendar.MILLISECOND, 0)
+        }
+    val latestCalendar = Calendar.getInstance()
+        .apply { time = today.time }
     today.add(Calendar.MONTH, -5)
-    val firstCalendar = Calendar.getInstance().apply { time = today.time }
+    val firstCalendar = Calendar.getInstance()
+        .apply { time = today.time }
 
-    val tempCalendar = Calendar.getInstance().apply { time = firstCalendar.time }
+    val tempCalendar = Calendar.getInstance()
+        .apply { time = firstCalendar.time }
     for (i in 0 until 6) {
-      val monthCalendar = Calendar.getInstance().apply { time = tempCalendar.time }
+      val monthCalendar = Calendar.getInstance()
+          .apply { time = tempCalendar.time }
       val monthString = MONTH_FORMAT.format(monthCalendar.time)
       months.add(Pair(monthString, monthCalendar.time))
       tempCalendar.add(Calendar.MONTH, 1)
@@ -93,10 +102,12 @@ class SummaryViewModelTest {
 
     val summaryItemList1 = SummaryListItem(
         tagAndTotal1.tagName,
-        "¥100.00")
+        "¥100.00"
+    )
     val summaryItemList2 = SummaryListItem(
         tagAndTotal2.tagName,
-        "¥200.00")
+        "¥200.00"
+    )
 
     `when`(applicationContext.getString(R.string.amount_format, 100.0f))
         .thenReturn("¥100.00")
@@ -104,24 +115,34 @@ class SummaryViewModelTest {
         .thenReturn("¥200.00")
     `when`(accountingDao.getMonthTotalAmount(6))
         .thenReturn(Maybe.just(monthTotalList))
-    `when`(accountingDao.getGroupingMonthTotalAmount(
-        latestCalendar.get(Calendar.YEAR).toString(),
-        ensureNum2Length(latestCalendar.get(Calendar.MONTH) + 1)))
+    `when`(
+        accountingDao.getGroupingMonthTotalAmount(
+            latestCalendar.get(Calendar.YEAR).toString(),
+            ensureNum2Length(latestCalendar.get(Calendar.MONTH) + 1)
+        )
+    )
         .thenReturn(listOf(tagAndTotal2))
-    `when`(accountingDao.getGroupingMonthTotalAmountObservable(
-        firstCalendar.get(Calendar.YEAR).toString(),
-        ensureNum2Length(firstCalendar.get(Calendar.MONTH) + 1)))
+    `when`(
+        accountingDao.getGroupingMonthTotalAmountObservable(
+            firstCalendar.get(Calendar.YEAR).toString(),
+            ensureNum2Length(firstCalendar.get(Calendar.MONTH) + 1)
+        )
+    )
         .thenReturn(Maybe.just(listOf(tagAndTotal1)))
 
-    `when`(accountingDao.getGroupingMonthTotalAmountObservable(
-        latestCalendar.get(Calendar.YEAR).toString(),
-        ensureNum2Length(latestCalendar.get(Calendar.MONTH) + 1)))
+    `when`(
+        accountingDao.getGroupingMonthTotalAmountObservable(
+            latestCalendar.get(Calendar.YEAR).toString(),
+            ensureNum2Length(latestCalendar.get(Calendar.MONTH) + 1)
+        )
+    )
         .thenReturn(Maybe.just(listOf(tagAndTotal2)))
 
     val intents = Observable.merge(
         Observable.just(SummaryIntent.InitialIntent()),
         Observable.just(SummaryIntent.SwitchMonthIntent(firstCalendar.time)),
-        Observable.just(SummaryIntent.SwitchMonthIntent(latestCalendar.time)))
+        Observable.just(SummaryIntent.SwitchMonthIntent(latestCalendar.time))
+    )
     summaryViewModel.processIntents(intents)
     testObserver.assertValueAt(
         1,
@@ -133,7 +154,9 @@ class SummaryViewModelTest {
             listOf(),
             0,
             listOf(),
-            false))
+            false
+        )
+    )
     testObserver.assertValueAt(
         2,
         SummaryViewState(
@@ -144,7 +167,9 @@ class SummaryViewModelTest {
             values,
             5,
             listOf(summaryItemList2),
-            false))
+            false
+        )
+    )
     testObserver.assertValueAt(
         3,
         SummaryViewState(
@@ -155,7 +180,9 @@ class SummaryViewModelTest {
             values,
             5,
             listOf(summaryItemList2),
-            true))
+            true
+        )
+    )
     testObserver.assertValueAt(
         4,
         SummaryViewState(
@@ -166,7 +193,9 @@ class SummaryViewModelTest {
             values,
             5,
             listOf(summaryItemList1),
-            true))
+            true
+        )
+    )
     testObserver.assertValueAt(
         5,
         SummaryViewState(
@@ -177,7 +206,9 @@ class SummaryViewModelTest {
             values,
             5,
             listOf(summaryItemList1),
-            true))
+            true
+        )
+    )
     testObserver.assertValueAt(
         6,
         SummaryViewState(
@@ -188,15 +219,17 @@ class SummaryViewModelTest {
             values,
             5,
             listOf(summaryItemList2),
-            true))
+            true
+        )
+    )
   }
 
   private fun ensureNum2Length(num: Int): String =
-      if (num < 10) {
-        "0$num"
-      } else {
-        num.toString()
-      }
+    if (num < 10) {
+      "0$num"
+    } else {
+      num.toString()
+    }
 
   companion object {
     private val YEAR_MONTH_FORMAT = SimpleDateFormat("yyyy-MM")

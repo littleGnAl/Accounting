@@ -29,10 +29,10 @@ sealed class AddOrEditIntent : MviIntent {
    * 创建或者更新记录
    */
   data class CreateOrUpdateIntent(
-      val accountingId: Int?,
-      val amount: Float,
-      val tagName: String,
-      val showDate: String,
-      val remarks: String?
+    val accountingId: Int?,
+    val amount: Float,
+    val tagName: String,
+    val showDate: String,
+    val remarks: String?
   ) : AddOrEditIntent()
 }

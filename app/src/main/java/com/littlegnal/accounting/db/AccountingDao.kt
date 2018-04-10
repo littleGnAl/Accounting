@@ -21,26 +21,33 @@ import android.arch.persistence.room.Insert
 import android.arch.persistence.room.OnConflictStrategy
 import android.arch.persistence.room.Query
 import io.reactivex.Maybe
-import java.util.*
+import java.util.Date
 
 @Dao
 interface AccountingDao {
 
-  @Query("""
+  @Query(
+      """
     SELECT * FROM accounting WHERE createTime <= :lastDate ORDER BY createTime DESC
     LIMIT :limit
-    """)
-  fun queryPreviousAccounting(lastDate: Date, limit: Long): Maybe<List<Accounting>>
+    """
+  )
+  fun queryPreviousAccounting(
+    lastDate: Date,
+    limit: Long
+  ): Maybe<List<Accounting>>
 
   /**
    * @param someDayDate 日期格式为`yyyy-MM-dd`
    */
-  @Query("""
+  @Query(
+      """
     SELECT SUM(amount)
     FROM accounting
     WHERE datetime(createTime / 1000, 'unixepoch') >= date(:someDayDate) AND
       datetime(createTime / 1000, 'unixepoch') < date(:someDayDate, '+1 day')
-    """)
+    """
+  )
   fun sumOfDay(someDayDate: String): Float
 
   @Query("SELECT * FROM accounting WHERE id = :id")
@@ -49,35 +56,49 @@ interface AccountingDao {
   @Insert(onConflict = OnConflictStrategy.REPLACE)
   fun insertAccounting(accounting: Accounting): Long
 
-  @Query("""
+  @Query(
+      """
     SELECT SUM(amount) as total, tag_name
     FROM accounting
     WHERE strftime('%Y', createTime / 1000, 'unixepoch') = :year
       AND  strftime('%m', createTime / 1000, 'unixepoch') = :month
     GROUP BY tag_name
-    """)
-  fun getGroupingMonthTotalAmountObservable(year: String, month: String): Maybe<List<TagAndTotal>>
+    """
+  )
+  fun getGroupingMonthTotalAmountObservable(
+    year: String,
+    month: String
+  ): Maybe<List<TagAndTotal>>
 
-  @Query("""
+  @Query(
+      """
     SELECT SUM(amount) as total, tag_name
     FROM accounting
     WHERE strftime('%Y', createTime / 1000, 'unixepoch') = :year
       AND  strftime('%m', createTime / 1000, 'unixepoch') = :month
     GROUP BY tag_name
-    """)
-  fun getGroupingMonthTotalAmount(year: String, month: String): List<TagAndTotal>
+    """
+  )
+  fun getGroupingMonthTotalAmount(
+    year: String,
+    month: String
+  ): List<TagAndTotal>
 
-  @Query("""
+  @Query(
+      """
     SELECT strftime('%Y-%m', createTime / 1000, 'unixepoch') year_month, SUM(amount) total
     FROM accounting
     GROUP BY year_month
     ORDER BY year_month DESC
     LIMIT :limit
-    """)
+    """
+  )
   fun getMonthTotalAmount(limit: Long): Maybe<List<MonthTotal>>
 
-  @Query("""
+  @Query(
+      """
     DELETE FROM accounting WHERE id = :id
-    """)
+    """
+  )
   fun deleteAccountingById(id: Int): Int
 }

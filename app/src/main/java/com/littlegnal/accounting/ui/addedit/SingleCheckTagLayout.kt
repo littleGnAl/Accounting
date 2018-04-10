@@ -42,9 +42,16 @@ class SingleCheckTagLayout : FlexboxLayout {
 
   constructor(context: Context) : super(context)
 
-  constructor(context: Context, attrs: AttributeSet) : super(context, attrs)
+  constructor(
+    context: Context,
+    attrs: AttributeSet
+  ) : super(context, attrs)
 
-  constructor(context: Context, attrs: AttributeSet, defStyleAttr: kotlin.Int) :
+  constructor(
+    context: Context,
+    attrs: AttributeSet,
+    defStyleAttr: kotlin.Int
+  ) :
       super(context, attrs, defStyleAttr)
 
   override fun onFinishInflate() {
@@ -62,12 +69,16 @@ class SingleCheckTagLayout : FlexboxLayout {
       tagView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 16.0f)
       tagView.setBackgroundResource(R.drawable.add_or_edit_tag_bg)
       tagView.setPadding(dip(10), 0, dip(10), 0)
-      tagView.setTextColor(AppCompatResources.getColorStateList(
-          context, R.color.add_or_edit_tag_text_color))
+      tagView.setTextColor(
+          AppCompatResources.getColorStateList(
+              context, R.color.add_or_edit_tag_text_color
+          )
+      )
       tagView.gravity = Gravity.CENTER
       val tagViewLp = FlexboxLayout.LayoutParams(
           FlexboxLayout.LayoutParams.WRAP_CONTENT,
-          dip(36))
+          dip(36)
+      )
       tagViewLp.bottomMargin = dip(6)
       tagViewLp.rightMargin = dip(6)
 

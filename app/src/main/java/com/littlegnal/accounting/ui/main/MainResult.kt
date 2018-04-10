@@ -19,78 +19,83 @@ package com.littlegnal.accounting.ui.main
 import com.littlegnal.accounting.base.mvi.LceStatus
 import com.littlegnal.accounting.base.mvi.MviResult
 import com.littlegnal.accounting.db.Accounting
-import java.util.*
+import java.util.Date
 
 sealed class MainResult : MviResult {
 
   data class LoadAccountingsResult(
-      val status: LceStatus,
-      val error: Throwable?,
-      val lastDate: Date,
-      val accountingList: List<Accounting>
+    val status: LceStatus,
+    val error: Throwable?,
+    val lastDate: Date,
+    val accountingList: List<Accounting>
   ) : MainResult() {
     companion object {
-      fun success(lastDate: Date, accountingList: List<Accounting>) =
-          LoadAccountingsResult(
-              LceStatus.SUCCESS,
-              null,
-              lastDate,
-              accountingList)
+      fun success(
+        lastDate: Date,
+        accountingList: List<Accounting>
+      ) =
+        LoadAccountingsResult(
+            LceStatus.SUCCESS,
+            null,
+            lastDate,
+            accountingList
+        )
 
       fun failure(error: Throwable?) =
-          LoadAccountingsResult(
-              LceStatus.FAILURE,
-              error,
-              Date(),
-              listOf())
+        LoadAccountingsResult(
+            LceStatus.FAILURE,
+            error,
+            Date(),
+            listOf()
+        )
 
       fun inFlight() =
-          LoadAccountingsResult(
-              LceStatus.IN_FLIGHT,
-              null,
-              Date(),
-              listOf())
+        LoadAccountingsResult(
+            LceStatus.IN_FLIGHT,
+            null,
+            Date(),
+            listOf()
+        )
     }
   }
 
   data class DeleteAccountingResult(
-      val status: LceStatus,
-      val error: Throwable?,
-      val deletedId: Int
+    val status: LceStatus,
+    val error: Throwable?,
+    val deletedId: Int
   ) : MainResult() {
     companion object {
 
       fun success(deletedId: Int) =
-          DeleteAccountingResult(LceStatus.SUCCESS, null, deletedId)
+        DeleteAccountingResult(LceStatus.SUCCESS, null, deletedId)
 
       fun failure(error: Throwable?) =
-          DeleteAccountingResult(LceStatus.FAILURE, error, -1)
+        DeleteAccountingResult(LceStatus.FAILURE, error, -1)
 
       fun inFlight() =
-          DeleteAccountingResult(LceStatus.IN_FLIGHT, null, -1)
+        DeleteAccountingResult(LceStatus.IN_FLIGHT, null, -1)
     }
   }
 
   data class AddAccountingResult(
-      val status: LceStatus,
-      val error: Throwable?,
-      val accounting: Accounting
+    val status: LceStatus,
+    val error: Throwable?,
+    val accounting: Accounting
   ) : MainResult() {
     companion object {
       fun success(accounting: Accounting) =
-          AddAccountingResult(LceStatus.SUCCESS, null, accounting)
+        AddAccountingResult(LceStatus.SUCCESS, null, accounting)
     }
   }
 
   data class UpdateAccountingResult(
-      val status: LceStatus,
-      val error: Throwable?,
-      val accounting: Accounting
+    val status: LceStatus,
+    val error: Throwable?,
+    val accounting: Accounting
   ) : MainResult() {
     companion object {
       fun success(accounting: Accounting) =
-          UpdateAccountingResult(LceStatus.SUCCESS, null, accounting)
+        UpdateAccountingResult(LceStatus.SUCCESS, null, accounting)
     }
   }
-
 }

@@ -34,6 +34,5 @@ abstract class MainAccountingDetailLoadingModel :
     override fun bindView(itemView: View?) {
       pbLoading = itemView?.findViewById(R.id.pb_main_accounting_detail_loading)
     }
-
   }
 }

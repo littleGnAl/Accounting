@@ -35,8 +35,8 @@ class DeleteConfirmDialog : DialogFragment() {
       AlertDialog.Builder(it, R.style.DeleteDialogStyle)
           .setMessage(R.string.delete_confirm_tips)
           .setPositiveButton(android.R.string.ok, okClickListener)
-          .setNegativeButton(android.R.string.cancel) {
-            dialogInterface, _ -> dialogInterface.dismiss()
+          .setNegativeButton(android.R.string.cancel) { dialogInterface, _ ->
+            dialogInterface.dismiss()
           }
           .create()
     }!!

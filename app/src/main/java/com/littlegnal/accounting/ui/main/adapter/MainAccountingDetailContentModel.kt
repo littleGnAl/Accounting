@@ -63,8 +63,6 @@ abstract class MainAccountingDetailContentModel :
         tvRemarks = it.findViewById(R.id.tv_main_accounting_detail_content_remarks)
         tvAmount = it.findViewById(R.id.tv_main_accounting_detail_content_amount)
       }
-
     }
-
   }
 }

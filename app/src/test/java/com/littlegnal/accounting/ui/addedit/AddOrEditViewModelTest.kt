@@ -26,10 +26,12 @@ import io.reactivex.observers.TestObserver
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mock
-import org.mockito.Mockito.*
+import org.mockito.Mockito.`when`
+import org.mockito.Mockito.times
+import org.mockito.Mockito.verify
 import org.mockito.MockitoAnnotations
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
 
 class AddOrEditViewModelTest {
 
@@ -48,21 +50,25 @@ class AddOrEditViewModelTest {
     MockitoAnnotations.initMocks(this)
 
     addOrEditViewModel = AddOrEditViewModel(
-        AddOrEditActionProcessorHolder(TestSchedulerProvider(), accountingDao), rxBus)
-    testObserver = addOrEditViewModel.states().test()
+        AddOrEditActionProcessorHolder(TestSchedulerProvider(), accountingDao), rxBus
+    )
+    testObserver = addOrEditViewModel.states()
+        .test()
   }
 
   @Test
   fun test_initialIntent_edit() {
-    val calendar = Calendar.getInstance().apply {
-      set(Calendar.SECOND, 0)
-      set(Calendar.MILLISECOND, 0)
-    }
+    val calendar = Calendar.getInstance()
+        .apply {
+          set(Calendar.SECOND, 0)
+          set(Calendar.MILLISECOND, 0)
+        }
     val account = Accounting(
         100.0f,
         calendar.time,
         "早餐",
-        "100块的茶叶蛋")
+        "100块的茶叶蛋"
+    )
     account.id = 1
 
     `when`(accountingDao.getAccountingById(1)).thenReturn(Maybe.just(account))
@@ -73,7 +79,8 @@ class AddOrEditViewModelTest {
         amount = account.amount.toString(),
         tagName = account.tagName,
         dateTime = DATE_TIME_FORMAT.format(account.createTime),
-        remarks = account.remarks)
+        remarks = account.remarks
+    )
 
     addOrEditViewModel.processIntents(Observable.just(AddOrEditIntent.InitialIntent(1)))
     testObserver.assertValueAt(1, loadingState)
@@ -82,30 +89,37 @@ class AddOrEditViewModelTest {
 
   @Test
   fun test_CreateOrUpdateIntent_create() {
-    val calendar = Calendar.getInstance().apply {
-      set(Calendar.SECOND, 0)
-      set(Calendar.MILLISECOND, 0)
-    }
+    val calendar = Calendar.getInstance()
+        .apply {
+          set(Calendar.SECOND, 0)
+          set(Calendar.MILLISECOND, 0)
+        }
     val account = Accounting(
         100.0f,
         calendar.time,
         "早餐",
-        "100块的茶叶蛋")
+        "100块的茶叶蛋"
+    )
 
-    val insertAccount = account.copy().apply { id = 1 }
+    val insertAccount = account.copy()
+        .apply { id = 1 }
 
     `when`(accountingDao.insertAccounting(account)).thenReturn(1)
 
     val loadingState = AddOrEditViewState(isLoading = true, error = null, isNeedFinish = false)
     val createState = loadingState.copy(isLoading = false, isNeedFinish = true)
 
-    addOrEditViewModel.processIntents(Observable.just(
-        AddOrEditIntent.CreateOrUpdateIntent(
-          null,
-          account.amount,
-          account.tagName,
-          DATE_TIME_FORMAT.format(account.createTime),
-          account.remarks)))
+    addOrEditViewModel.processIntents(
+        Observable.just(
+            AddOrEditIntent.CreateOrUpdateIntent(
+                null,
+                account.amount,
+                account.tagName,
+                DATE_TIME_FORMAT.format(account.createTime),
+                account.remarks
+            )
+        )
+    )
 
     verify(accountingDao, times(1)).insertAccounting(account)
     verify(rxBus, times(1))
@@ -117,18 +131,21 @@ class AddOrEditViewModelTest {
 
   @Test
   fun test_CreateOrUpdateIntent_update() {
-    val calendar = Calendar.getInstance().apply {
-      set(Calendar.SECOND, 0)
-      set(Calendar.MILLISECOND, 0)
-    }
+    val calendar = Calendar.getInstance()
+        .apply {
+          set(Calendar.SECOND, 0)
+          set(Calendar.MILLISECOND, 0)
+        }
     val account = Accounting(
         100.0f,
         calendar.time,
         "早餐",
-        "100块的茶叶蛋")
+        "100块的茶叶蛋"
+    )
     account.id = 1
 
-    val updateAccounting = account.copy(amount = 200.0f).apply { id = 2 }
+    val updateAccounting = account.copy(amount = 200.0f)
+        .apply { id = 2 }
 
     `when`(accountingDao.getAccountingById(1)).thenReturn(Maybe.just(account))
     `when`(accountingDao.insertAccounting(updateAccounting)).thenReturn(2)
@@ -139,16 +156,21 @@ class AddOrEditViewModelTest {
         amount = account.amount.toString(),
         tagName = account.tagName,
         dateTime = DATE_TIME_FORMAT.format(account.createTime),
-        remarks = account.remarks)
+        remarks = account.remarks
+    )
 
     val intents = Observable.merge(
         Observable.just(AddOrEditIntent.InitialIntent(1)),
-        Observable.just(AddOrEditIntent.CreateOrUpdateIntent(
+        Observable.just(
+            AddOrEditIntent.CreateOrUpdateIntent(
                 null,
                 updateAccounting.amount,
                 updateAccounting.tagName,
                 DATE_TIME_FORMAT.format(updateAccounting.createTime),
-                updateAccounting.remarks)))
+                updateAccounting.remarks
+            )
+        )
+    )
 
     addOrEditViewModel.processIntents(intents)
 

@@ -8,5 +8,6 @@ import android.arch.persistence.room.ColumnInfo
  * @see [AccountingDao.getMonthTotalAmount]
  */
 data class MonthTotal(
-    @ColumnInfo(name = "year_month") var yearAndMonth: String,
-    @ColumnInfo(name = "total")  var total: Float)
+  @ColumnInfo(name = "year_month") var yearAndMonth: String,
+  @ColumnInfo(name = "total") var total: Float
+)

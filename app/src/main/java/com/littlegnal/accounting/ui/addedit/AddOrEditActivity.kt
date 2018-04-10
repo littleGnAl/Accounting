@@ -38,11 +38,15 @@ import io.reactivex.android.schedulers.AndroidSchedulers
 import io.reactivex.disposables.CompositeDisposable
 import io.reactivex.functions.Function3
 import io.reactivex.subjects.PublishSubject
-import kotlinx.android.synthetic.main.activity_add_or_edit.*
-import java.util.*
+import kotlinx.android.synthetic.main.activity_add_or_edit.btn_add_or_edit_confirm
+import kotlinx.android.synthetic.main.activity_add_or_edit.et_add_or_edit_pay_value
+import kotlinx.android.synthetic.main.activity_add_or_edit.et_add_or_edit_remarks
+import kotlinx.android.synthetic.main.activity_add_or_edit.fbl_tag_container
+import kotlinx.android.synthetic.main.activity_add_or_edit.sv_add_or_edit
+import kotlinx.android.synthetic.main.activity_add_or_edit.tv_add_or_edit_date_value
+import java.util.Calendar
 import java.util.concurrent.TimeUnit
 import javax.inject.Inject
-
 
 /**
  * 增加或修改页面
@@ -68,12 +72,13 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
     setContentView(R.layout.activity_add_or_edit)
     setToolbarWithBack()
 
-    accountingId = intent?.getIntExtra(ACCOUNTING_ID_KEY, -1).let {
-      if (it == -1) null else it
-    }
+    accountingId = intent?.getIntExtra(ACCOUNTING_ID_KEY, -1)
+        .let {
+          if (it == -1) null else it
+        }
 
-    title = accountingId?.let { getString(R.string.add_or_edit_edit_title) } ?:
-        getString(R.string.add_or_edit_add_title)
+    title = accountingId?.let { getString(R.string.add_or_edit_edit_title) }
+        ?: getString(R.string.add_or_edit_add_title)
 
     tv_add_or_edit_date_value.setOnClickListener {
       hideSoftKeyboard()
@@ -102,10 +107,10 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
           pay.isNotEmpty() && tagName.isNotEmpty() && dateTime.isNotEmpty()
         })
     disposables += enableConfirmBtn
-            .observeOn(AndroidSchedulers.mainThread())
-            .subscribe {
-              btn_add_or_edit_confirm.isEnabled = it
-            }
+        .observeOn(AndroidSchedulers.mainThread())
+        .subscribe {
+          btn_add_or_edit_confirm.isEnabled = it
+        }
 
     bind()
   }
@@ -119,29 +124,31 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
         .get(AddOrEditViewModel::class.java)
 
     // 订阅render方法根据发送过来的state渲染界面
-    disposables += addOrEditViewModel.states().subscribe(this::render)
+    disposables += addOrEditViewModel.states()
+        .subscribe(this::render)
     // 传递UI的intents给ViewModel
     addOrEditViewModel.processIntents(intents())
   }
 
   override fun intents(): Observable<AddOrEditIntent> =
-      Observable.merge(initialIntent(), createOrUpdateIntent())
+    Observable.merge(initialIntent(), createOrUpdateIntent())
 
   private fun initialIntent(): Observable<AddOrEditIntent> {
     return Observable.just(AddOrEditIntent.InitialIntent(accountingId))
   }
 
   private fun createOrUpdateIntent(): Observable<AddOrEditIntent> =
-      RxView.clicks(btn_add_or_edit_confirm)
-          .throttleFirst(300, TimeUnit.MILLISECONDS)
-          .map {
-            AddOrEditIntent.CreateOrUpdateIntent(
-                accountingId,
-                et_add_or_edit_pay_value.text.toString().toFloat(),
-                fbl_tag_container.getCheckedTagName(),
-                showDate,
-                et_add_or_edit_remarks.text.toString())
-          }
+    RxView.clicks(btn_add_or_edit_confirm)
+        .throttleFirst(300, TimeUnit.MILLISECONDS)
+        .map {
+          AddOrEditIntent.CreateOrUpdateIntent(
+              accountingId,
+              et_add_or_edit_pay_value.text.toString().toFloat(),
+              fbl_tag_container.getCheckedTagName(),
+              showDate,
+              et_add_or_edit_remarks.text.toString()
+          )
+        }
 
   override fun render(state: AddOrEditViewState) {
     if (state.isNeedFinish) {
@@ -177,7 +184,8 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
         },
         c.get(Calendar.YEAR),
         c.get(Calendar.MONTH),
-        c.get(Calendar.DAY_OF_MONTH))
+        c.get(Calendar.DAY_OF_MONTH)
+    )
     datePickerDialog.datePicker.maxDate = c.timeInMillis
     datePickerDialog.show()
   }
@@ -193,7 +201,8 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
         },
         c.get(Calendar.HOUR_OF_DAY),
         c.get(Calendar.MINUTE),
-        true).run { show() }
+        true
+    ).run { show() }
   }
 
   override fun onDestroy() {
@@ -209,15 +218,20 @@ class AddOrEditActivity : BaseActivity(), MviView<AddOrEditIntent, AddOrEditView
       addOrEdit(activity)
     }
 
-    fun edit(activity: Activity, accountingId: Int) {
+    fun edit(
+      activity: Activity,
+      accountingId: Int
+    ) {
       addOrEdit(activity, accountingId)
     }
 
-    private fun addOrEdit(activity: Activity, accountingId: Int = -1) {
+    private fun addOrEdit(
+      activity: Activity,
+      accountingId: Int = -1
+    ) {
       val intent = Intent(activity, AddOrEditActivity::class.java)
       intent.putExtra(ACCOUNTING_ID_KEY, accountingId)
       activity.startActivity(intent)
     }
   }
-
 }

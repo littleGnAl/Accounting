@@ -18,7 +18,11 @@ package com.littlegnal.accounting.ui.summary
 
 import android.annotation.SuppressLint
 import android.content.Context
-import android.graphics.*
+import android.graphics.Canvas
+import android.graphics.Paint
+import android.graphics.Path
+import android.graphics.Rect
+import android.graphics.RectF
 import android.util.AttributeSet
 import android.view.MotionEvent
 import android.view.View
@@ -28,7 +32,7 @@ import com.littlegnal.accounting.base.util.colorRes
 import com.littlegnal.accounting.base.util.dip
 import com.littlegnal.accounting.base.util.sp
 import io.reactivex.subjects.PublishSubject
-import java.util.*
+import java.util.Date
 
 /**
  * 汇总曲线控件
@@ -59,11 +63,11 @@ class SummaryChart : View {
 
   private val linePaint: Paint by lazy {
     Paint(Paint.ANTI_ALIAS_FLAG)
-          .apply {
-            color = context.colorRes(R.color.colorAccent)
-            strokeWidth = dip(2).toFloat()
-            style = Paint.Style.STROKE
-          }
+        .apply {
+          color = context.colorRes(R.color.colorAccent)
+          strokeWidth = dip(2).toFloat()
+          style = Paint.Style.STROKE
+        }
   }
 
   private val monthsPaint: Paint by lazy {
@@ -114,11 +118,19 @@ class SummaryChart : View {
 
   constructor(context: Context?) : this(context, null)
 
-  constructor(context: Context?, attrs: AttributeSet?) : this(context, attrs, 0)
+  constructor(
+    context: Context?,
+    attrs: AttributeSet?
+  ) : this(context, attrs, 0)
 
-  constructor(context: Context?, attrs: AttributeSet?, defStyleAttr: Int) :
+  constructor(
+    context: Context?,
+    attrs: AttributeSet?,
+    defStyleAttr: Int
+  ) :
       super(context, attrs, defStyleAttr) {
-    touchSlop = ViewConfiguration.get(context).scaledTouchSlop
+    touchSlop = ViewConfiguration.get(context)
+        .scaledTouchSlop
   }
 
   override fun onDraw(canvas: Canvas?) {
@@ -172,47 +184,52 @@ class SummaryChart : View {
           canvas?.drawCircle(x, y, DOT_RADIUS.toFloat(), dotPaint)
         }
 
-        values?.get(index)?.apply {
-          val valueWidth = getTextWith(this, valueTipsTextPaint)
-          val valueHeight = getTextHeight(this, valueTipsTextPaint)
+        values?.get(index)
+            ?.apply {
+              val valueWidth = getTextWith(this, valueTipsTextPaint)
+              val valueHeight = getTextHeight(this, valueTipsTextPaint)
 
-          if (valueIndex == selectedIndex) {
-            trianglePath.reset()
-            trianglePath.moveTo(x, y - triangleDotMargin - SELECTED_DOT_RADIUS / 2.0f)
-            trianglePath.lineTo(
-                x - triangleWidth / 2.0f,
-                y - triangleDotMargin - triangleHeight - SELECTED_DOT_RADIUS / 2.0f)
-            trianglePath.lineTo(
-                x + triangleWidth / 2.0f,
-                y - triangleDotMargin - triangleHeight - SELECTED_DOT_RADIUS / 2.0f)
+              if (valueIndex == selectedIndex) {
+                trianglePath.reset()
+                trianglePath.moveTo(x, y - triangleDotMargin - SELECTED_DOT_RADIUS / 2.0f)
+                trianglePath.lineTo(
+                    x - triangleWidth / 2.0f,
+                    y - triangleDotMargin - triangleHeight - SELECTED_DOT_RADIUS / 2.0f
+                )
+                trianglePath.lineTo(
+                    x + triangleWidth / 2.0f,
+                    y - triangleDotMargin - triangleHeight - SELECTED_DOT_RADIUS / 2.0f
+                )
 
-            val rectWidth = valueWidth + dip(6) * 2.0f
-            val rectHeight = valueHeight + dip(6) * 2.0f
+                val rectWidth = valueWidth + dip(6) * 2.0f
+                val rectHeight = valueHeight + dip(6) * 2.0f
 
-            valueTipsRectF.setEmpty()
-            valueTipsRectF.left = x - rectWidth / 2.0f
-            valueTipsRectF.right = valueTipsRectF.left + rectWidth
-            valueTipsRectF.bottom = y - triangleDotMargin - triangleHeight -
-                SELECTED_DOT_RADIUS / 2.0f
-            valueTipsRectF.top = valueTipsRectF.bottom - rectHeight
-            trianglePath.addRoundRect(valueTipsRectF, rectRadius, rectRadius, Path.Direction.CW)
-            canvas?.drawPath(trianglePath, valueTipsPaint)
+                valueTipsRectF.setEmpty()
+                valueTipsRectF.left = x - rectWidth / 2.0f
+                valueTipsRectF.right = valueTipsRectF.left + rectWidth
+                valueTipsRectF.bottom = y - triangleDotMargin - triangleHeight -
+                    SELECTED_DOT_RADIUS / 2.0f
+                valueTipsRectF.top = valueTipsRectF.bottom - rectHeight
+                trianglePath.addRoundRect(valueTipsRectF, rectRadius, rectRadius, Path.Direction.CW)
+                canvas?.drawPath(trianglePath, valueTipsPaint)
 
-            valueTipsTextPaint.color = context.colorRes(R.color.colorAccent)
-            canvas?.drawText(
-                this,
-                valueTipsRectF.centerX() - valueWidth / 2.0f,
-                valueTipsRectF.centerY() + valueHeight / 2.0f,
-                valueTipsTextPaint)
-          } else {
-            valueTipsTextPaint.color = context.colorRes(R.color.defaultTextColor)
-            canvas?.drawText(
-                this,
-                x - valueWidth / 2.0f,
-                y - triangleDotMargin - DOT_RADIUS / 2.0f,
-                valueTipsTextPaint)
-          }
-        }
+                valueTipsTextPaint.color = context.colorRes(R.color.colorAccent)
+                canvas?.drawText(
+                    this,
+                    valueTipsRectF.centerX() - valueWidth / 2.0f,
+                    valueTipsRectF.centerY() + valueHeight / 2.0f,
+                    valueTipsTextPaint
+                )
+              } else {
+                valueTipsTextPaint.color = context.colorRes(R.color.defaultTextColor)
+                canvas?.drawText(
+                    this,
+                    x - valueWidth / 2.0f,
+                    y - triangleDotMargin - DOT_RADIUS / 2.0f,
+                    valueTipsTextPaint
+                )
+              }
+            }
       }
     }
   }
@@ -253,7 +270,7 @@ class SummaryChart : View {
 
   @SuppressLint("ClickableViewAccessibility")
   override fun onTouchEvent(event: MotionEvent?): Boolean {
-    when(event?.actionMasked) {
+    when (event?.actionMasked) {
       MotionEvent.ACTION_DOWN -> {
         activePointerId = event.getPointerId(0)
         lastDownX = event.x
@@ -279,12 +296,14 @@ class SummaryChart : View {
                 val valueX = index * itemSpacing + itemSpacing / 2.0f
 
                 if (Math.abs(x - valueX) <= TOUCH_RADIUS / 2.0f &&
-                    Math.abs(y - getYByValue(it.second)) <= TOUCH_RADIUS / 2.0f) {
-                  months?.get(index)?.apply {
-                    selectedIndex = index
-                    postInvalidate()
-                    monthClickedPublisher.onNext(this.second)
-                  }
+                    Math.abs(y - getYByValue(it.second)) <= TOUCH_RADIUS / 2.0f
+                ) {
+                  months?.get(index)
+                      ?.apply {
+                        selectedIndex = index
+                        postInvalidate()
+                        monthClickedPublisher.onNext(this.second)
+                      }
                 }
               }
         }
@@ -296,10 +315,16 @@ class SummaryChart : View {
     return true
   }
 
-  private fun getTextWith(text: String, paint: Paint): Float =
-      paint.measureText(text, 0, text.length)
+  private fun getTextWith(
+    text: String,
+    paint: Paint
+  ): Float =
+    paint.measureText(text, 0, text.length)
 
-  private fun getTextHeight(text: String, paint: Paint): Int {
+  private fun getTextHeight(
+    text: String,
+    paint: Paint
+  ): Int {
     textBounds.setEmpty()
     paint.getTextBounds(text, 0, text.length, textBounds)
 

@@ -26,7 +26,7 @@ import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.text.SimpleDateFormat
-import java.util.*
+import java.util.Calendar
 
 @RunWith(AndroidJUnit4::class)
 class AccountingDaoTest {
@@ -163,7 +163,7 @@ class AccountingDaoTest {
 
     accountingDao.queryPreviousAccounting(Calendar.getInstance().time, 100)
         .test()
-        .assertValue { it.size == 2}
+        .assertValue { it.size == 2 }
   }
 
   @Test
@@ -262,5 +262,4 @@ class AccountingDaoTest {
     private val ONE_DAY_FORMAT: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd")
     private val YEAR_MONTH_FORMAT: SimpleDateFormat = SimpleDateFormat("yyyy-MM")
   }
-
 }

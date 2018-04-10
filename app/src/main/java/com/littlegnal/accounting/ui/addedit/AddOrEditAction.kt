@@ -25,17 +25,17 @@ sealed class AddOrEditAction : MviAction {
   data class LoadAccountingAction(val accountingId: Int) : AddOrEditAction()
 
   data class CreateAccountingAction(
-      val amount: Float,
-      val tagName: String,
-      val showDate: String,
-      val remarks: String?
+    val amount: Float,
+    val tagName: String,
+    val showDate: String,
+    val remarks: String?
   ) : AddOrEditAction()
 
   data class UpdateAccountingAction(
-      val accountingId: Int,
-      val amount: Float,
-      val tagName: String,
-      val showDate: String,
-      val remarks: String?
+    val accountingId: Int,
+    val amount: Float,
+    val tagName: String,
+    val showDate: String,
+    val remarks: String?
   ) : AddOrEditAction()
 }

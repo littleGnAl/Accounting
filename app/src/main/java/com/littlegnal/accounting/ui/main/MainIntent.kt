@@ -18,7 +18,7 @@ package com.littlegnal.accounting.ui.main
 
 import com.littlegnal.accounting.base.mvi.MviIntent
 import com.littlegnal.accounting.db.Accounting
-import java.util.*
+import java.util.Date
 
 sealed class MainIntent : MviIntent {
 
@@ -41,7 +41,7 @@ sealed class MainIntent : MviIntent {
    * 添加或编辑某一项记录
    */
   data class AddOrEditAccountingIntent(
-      val isAddedAccounting: Boolean,
-      val accounting: Accounting
+    val isAddedAccounting: Boolean,
+    val accounting: Accounting
   ) : MainIntent()
 }

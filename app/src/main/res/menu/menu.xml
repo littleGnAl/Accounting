@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <menu
-  xmlns:android="http://schemas.android.com/apk/res/android"
-  xmlns:tools="http://schemas.android.com/tools"
-  xmlns:app="http://schemas.android.com/apk/res-auto"
-  tools:context=".ui.main.MainActivity"
-  >
+    xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    xmlns:tools="http://schemas.android.com/tools"
+    tools:context=".ui.main.MainActivity"
+    >
   <item
-    android:id="@+id/menu_summary"
-    android:title=""
-    app:showAsAction="always"
-    android:icon="@drawable/ic_show_chart_black_24dp"
-    />
+      android:id="@+id/menu_summary"
+      android:icon="@drawable/ic_show_chart_black_24dp"
+      android:title=""
+      app:showAsAction="always"
+      />
 </menu>

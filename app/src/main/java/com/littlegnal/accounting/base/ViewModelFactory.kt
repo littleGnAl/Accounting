@@ -27,7 +27,7 @@ import javax.inject.Singleton
  */
 @Singleton
 class ViewModelFactory @Inject constructor(
-    private val creators: @JvmSuppressWildcards Map<Class<out ViewModel>, Provider<ViewModel>>
+  private val creators: @JvmSuppressWildcards Map<Class<out ViewModel>, Provider<ViewModel>>
 ) : ViewModelProvider.Factory {
 
   override fun <T : ViewModel?> create(modelClass: Class<T>): T {
@@ -47,6 +47,5 @@ class ViewModelFactory @Inject constructor(
     } catch (e: Exception) {
       throw RuntimeException(e)
     }
-
   }
 }

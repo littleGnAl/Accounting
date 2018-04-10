@@ -31,8 +31,9 @@ class MainAccountingDetailController :
   private val itemLongClickPublisher: PublishSubject<Int> = PublishSubject.create()
 
   override fun buildModels(
-      list: List<MainAccountingDetail>?,
-      isLoading: Boolean) {
+    list: List<MainAccountingDetail>?,
+    isLoading: Boolean
+  ) {
     list?.apply {
       for (accountingDetail in this) {
         if (accountingDetail is MainAccountingDetailHeader) {
@@ -67,7 +68,10 @@ class MainAccountingDetailController :
     if (isLoading) mainAccountingDetailLoading { id("loading") }
   }
 
-  override fun setData(data1: List<MainAccountingDetail>, data2: Boolean) {
+  override fun setData(
+    data1: List<MainAccountingDetail>,
+    data2: Boolean
+  ) {
     accountingDetailList = data1
     isLoadingMore = data2
     super.setData(data1, data2)
@@ -80,5 +84,4 @@ class MainAccountingDetailController :
   fun getItemLongClickObservable(): Observable<Int> {
     return itemLongClickPublisher
   }
-
 }

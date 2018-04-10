@@ -16,4 +16,7 @@
 
 package com.littlegnal.accounting.ui.summary.adapter
 
-data class SummaryListItem(val tagName: String, val total: String)
+data class SummaryListItem(
+  val tagName: String,
+  val total: String
+)

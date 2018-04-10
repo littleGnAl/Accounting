@@ -26,8 +26,8 @@ class AddOrEditModule {
 
   @Provides
   fun provideAddOrEditActionProcessorHolder(
-      schedulerProvider: BaseSchedulerProvider,
-      accountingDao: AccountingDao) =
-      AddOrEditActionProcessorHolder(schedulerProvider, accountingDao)
-
+    schedulerProvider: BaseSchedulerProvider,
+    accountingDao: AccountingDao
+  ) =
+    AddOrEditActionProcessorHolder(schedulerProvider, accountingDao)
 }

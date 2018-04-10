@@ -38,7 +38,10 @@ open class BaseActivity : AppCompatActivity() {
     initToolbar()
   }
 
-  override fun setContentView(view: View?, params: ViewGroup.LayoutParams?) {
+  override fun setContentView(
+    view: View?,
+    params: ViewGroup.LayoutParams?
+  ) {
     super.setContentView(view, params)
     initToolbar()
   }
@@ -59,13 +62,15 @@ open class BaseActivity : AppCompatActivity() {
   fun hideSoftKeyboard() {
     if (inputMethodManager == null) {
       inputMethodManager = getSystemService(
-          Context.INPUT_METHOD_SERVICE) as InputMethodManager
+          Context.INPUT_METHOD_SERVICE
+      ) as InputMethodManager
     }
     if (window.attributes.softInputMode != WindowManager.LayoutParams.SOFT_INPUT_STATE_HIDDEN) {
       if (currentFocus != null) {
         inputMethodManager?.hideSoftInputFromWindow(
             currentFocus!!.windowToken,
-            InputMethodManager.HIDE_NOT_ALWAYS)
+            InputMethodManager.HIDE_NOT_ALWAYS
+        )
       }
     }
   }
