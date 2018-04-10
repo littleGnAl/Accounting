@@ -54,9 +54,10 @@ class SummaryActionProcessorHolder(
   private fun createSummaryListItems(list: List<TagAndTotal>): List<SummaryListItem> {
     val summaryItemList: MutableList<SummaryListItem> = mutableListOf()
     return list.mapTo(summaryItemList) {
+      val total: Float = it.total
       SummaryListItem(
           it.tagName,
-          applicationContext.getString(R.string.amount_format, it.total))
+          applicationContext.getString(R.string.amount_format, total))
     }
   }
 
@@ -122,9 +123,10 @@ class SummaryActionProcessorHolder(
                           firstMonthCalendar.get(Calendar.YEAR)) {
                     val index = calcMonthOffset(monthTotalCalendar, firstMonthCalendar)
                     points.add(Pair(index, monthTotal.total))
+                    val total: Float = monthTotal.total
                     values.add(applicationContext.getString(
                         R.string.amount_format,
-                        monthTotal.total))
+                        total))
                   }
                 }
 

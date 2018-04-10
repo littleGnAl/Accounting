@@ -1,7 +1,7 @@
 <resources>
   <string name="app_name">Accounting</string>
 
-  <string name="amount_format">¥%1$.2f</string>
+  <string name="amount_format">&#165;%1$.2f</string>
 
   <string name="main_accounting_detail_header_sum">共(¥%1$.2f)</string>
   <string name="main_accounting_no_accounting_records">没有记账记录</string>
