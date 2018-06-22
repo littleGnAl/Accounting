@@ -17,6 +17,6 @@
 package com.littlegnal.accounting.base.mvi
 
 /**
- * 不可变对象，代表用户意图，如点击按钮，用户输入等。
+ * Immutable object which represent an view's intent.
  */
 interface MviIntent

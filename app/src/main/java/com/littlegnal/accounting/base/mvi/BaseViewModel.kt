@@ -16,23 +16,20 @@
 
 package com.littlegnal.accounting.base.mvi
 
-import android.app.Activity
 import android.arch.lifecycle.ViewModel
-import android.support.v4.app.Fragment
 import com.littlegnal.accounting.base.eventbus.RxBus
 import io.reactivex.Observable
 import io.reactivex.subjects.PublishSubject
 
 /**
- * 抽象[MviViewModel]，实现[MviIntent]与[MviViewState]的连接
+ * Abstract implementation of [MviViewModel], connecting [MviIntent] and [MviViewState]
  */
 abstract class BaseViewModel<I : MviIntent, S : MviViewState> : ViewModel(), MviViewModel<I, S> {
 
   /**
-   * 用于保持流存活的代理[PublishSubject]。
-   *
-   * 主要用于保持UI（[Activity], [Fragment]）在配置发生变化（屏幕旋转）的时候断开或者重新连接正在进行事件和
-   * 上一次缓存状态存活
+   * Proxy subject used to keep the stream alive even after the UI gets recycled.
+   * This is basically used to keep ongoing events and the last cached State alive
+   * while the UI disconnects and reconnects on config changes.
    */
   private val intentsSubject = PublishSubject.create<I>()
   private val statesObservable: Observable<S> by lazy { compose(intentsSubject) }
@@ -44,13 +41,13 @@ abstract class BaseViewModel<I : MviIntent, S : MviViewState> : ViewModel(), Mvi
   override fun states(): Observable<S> = statesObservable
 
   /**
-   * 组合业务逻辑流
+   * Compose all components to create the stream logic
    */
   abstract fun compose(intentsSubject: PublishSubject<I>): Observable<S>
 
   /**
-   * 该方法用于合并其他页面通知过来的[MviIntent], 如通过[RxBus]
-   * 传递的[MviIntent]
+   * This method is used to merge [MviIntent] notified by other pages, such as [MviIntent] passed
+   * by [RxBus]
    */
   open fun mergeExtraIntents(intents: Observable<I>) = intents
 }

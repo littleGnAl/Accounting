@@ -17,6 +17,6 @@
 package com.littlegnal.accounting.base.mvi
 
 /**
- * 不可变的对象，提供给[MviView]渲染界面。
+ * Immutable object which contains all the required information to render a [MviView].
  */
 interface MviViewState

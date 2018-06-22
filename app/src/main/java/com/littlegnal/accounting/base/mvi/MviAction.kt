@@ -17,6 +17,6 @@
 package com.littlegnal.accounting.base.mvi
 
 /**
- * 不可变的对象，其中包含业务逻辑处理所需的所有信息。用于解耦UI和业务逻辑，方便测试及重用。
+ * Immutable object which contains all the required information for a business logic to process.
  */
 interface MviAction

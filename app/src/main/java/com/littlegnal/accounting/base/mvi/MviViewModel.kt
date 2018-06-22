@@ -19,11 +19,13 @@ package com.littlegnal.accounting.base.mvi
 import io.reactivex.Observable
 
 /**
- * 订阅[MviView]的意图[MviIntent]，处理业务逻辑后将[MviViewState]作为结果返回给[MviView]，来渲染界面
+ * Object that will subscribes to a [MviView]'s [MviIntent]s,
+ * process it and emit a [MviViewState] back.
  *
- * @param <I> 发出的意图[MviIntent]
- * @param <S> 订阅状态[MviViewState]，用于渲染UI.
- * */
+ * @param I Top class of the [MviIntent] that the [MviViewModel] will be subscribing
+ * to.
+ * @param S Top class of the [MviViewState] the [MviViewModel] will be emitting.
+ */
 interface MviViewModel<I : MviIntent, S : MviViewState> {
   fun processIntents(intents: Observable<I>)
 
