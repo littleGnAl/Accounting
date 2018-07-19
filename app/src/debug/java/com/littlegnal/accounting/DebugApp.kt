@@ -17,6 +17,12 @@
 package com.littlegnal.accounting
 
 import android.app.Application
+import com.facebook.soloader.SoLoader
+import com.facebook.sonar.android.AndroidSonarClient
+import com.facebook.sonar.android.utils.SonarUtils
+import com.facebook.sonar.plugins.inspector.DescriptorMapping
+import com.facebook.sonar.plugins.inspector.InspectorSonarPlugin
+import com.facebook.sonar.plugins.sharedpreferences.SharedPreferencesSonarPlugin
 import com.facebook.stetho.Stetho
 import com.squareup.leakcanary.LeakCanary
 import timber.log.Timber
@@ -36,5 +42,16 @@ class DebugApp : App() {
     Stetho.initializeWithDefaults(this)
 
     Timber.plant(Timber.DebugTree())
+
+    SoLoader.init(this, false)
+
+    if (SonarUtils.shouldEnableSonar(this)) {
+      with(AndroidSonarClient.getInstance(this)) {
+        addPlugin(InspectorSonarPlugin(this@DebugApp, DescriptorMapping.withDefaults()))
+        addPlugin(SharedPreferencesSonarPlugin(this@DebugApp))
+
+        start()
+      }
+    }
   }
 }

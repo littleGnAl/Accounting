@@ -120,4 +120,6 @@ dependencies {
   androidTestImplementation test.archComponentRoomTest
   androidTestImplementation test.archComponentCoreTest
   androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.0'
+
+  debugImplementation libraries.sonar
 }
