@@ -28,7 +28,7 @@ ext.versions = [
     junit_version               : '4.12',
     support_test_runner_version : '1.0.1',
     ktlint_version              : '0.29.0',
-    sonar_version               : '0.6.11'
+    flipper                     : '0.10.0'
 ]
 
 ext.gradlePlugins = [
@@ -76,7 +76,7 @@ ext.libraries = [
     flexbox                   : "com.google.android:flexbox:$versions.flexboxVersion",
     rxrelay                   : "com.jakewharton.rxrelay2:rxrelay:$versions.rxrelay_version",
     ktlint                    : "com.github.shyiko:ktlint:$versions.ktlint_version",
-    sonar                     : "com.facebook.sonar:sonar:$versions.sonar_version"
+    flipper                   : "com.facebook.flipper:flipper:$versions.flipper"
 ]
 
 ext.test = [
