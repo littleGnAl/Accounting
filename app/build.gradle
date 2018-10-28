@@ -124,5 +124,5 @@ dependencies {
   androidTestImplementation test.archComponentCoreTest
   androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.0'
 
-  debugImplementation 'com.facebook.flipper:flipper:0.10.0'
+  debugImplementation libraries.flipper
 }
