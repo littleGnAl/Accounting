@@ -17,11 +17,11 @@
 package com.littlegnal.accounting.ui.summary
 
 import android.app.Activity
-import android.arch.lifecycle.ViewModelProvider
-import android.arch.lifecycle.ViewModelProviders
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProviders
 import android.content.Intent
 import android.os.Bundle
-import android.support.v7.widget.LinearLayoutManager
+import androidx.recyclerview.widget.LinearLayoutManager
 import com.littlegnal.accounting.R
 import com.littlegnal.accounting.base.BaseActivity
 import com.littlegnal.accounting.base.DefaultItemDecoration

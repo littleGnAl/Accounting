@@ -17,7 +17,7 @@
 package com.littlegnal.accounting.di
 
 import android.app.Application
-import android.arch.persistence.room.Room
+import androidx.room.Room
 import android.content.Context
 import com.littlegnal.accounting.base.DB_NAME
 import com.littlegnal.accounting.base.eventbus.RxBus

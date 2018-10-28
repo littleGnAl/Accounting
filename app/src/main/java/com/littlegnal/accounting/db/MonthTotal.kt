@@ -1,6 +1,6 @@
 package com.littlegnal.accounting.db
 
-import android.arch.persistence.room.ColumnInfo
+import androidx.room.ColumnInfo
 
 /**
  * 月汇总数据库实体

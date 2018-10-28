@@ -16,7 +16,7 @@
 
 package com.littlegnal.accounting.ui.main
 
-import android.support.annotation.VisibleForTesting
+import androidx.annotation.VisibleForTesting
 import com.littlegnal.accounting.base.eventbus.RxBus
 import com.littlegnal.accounting.base.mvi.BaseViewModel
 import com.littlegnal.accounting.base.mvi.MviAction

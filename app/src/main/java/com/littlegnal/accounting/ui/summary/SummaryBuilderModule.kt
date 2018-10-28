@@ -16,7 +16,7 @@
 
 package com.littlegnal.accounting.ui.summary
 
-import android.arch.lifecycle.ViewModel
+import androidx.lifecycle.ViewModel
 import com.littlegnal.accounting.di.ViewModelKey
 import dagger.Binds
 import dagger.Module

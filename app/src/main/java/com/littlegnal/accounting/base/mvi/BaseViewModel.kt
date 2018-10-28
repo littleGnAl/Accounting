@@ -16,7 +16,7 @@
 
 package com.littlegnal.accounting.base.mvi
 
-import android.arch.lifecycle.ViewModel
+import androidx.lifecycle.ViewModel
 import com.littlegnal.accounting.base.eventbus.RxBus
 import io.reactivex.Observable
 import io.reactivex.subjects.PublishSubject

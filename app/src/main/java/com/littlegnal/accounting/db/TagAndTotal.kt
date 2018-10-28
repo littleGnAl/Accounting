@@ -16,7 +16,7 @@
 
 package com.littlegnal.accounting.db
 
-import android.arch.persistence.room.ColumnInfo
+import androidx.room.ColumnInfo
 
 /**
  * 按照[Accounting.tagName]汇总实体

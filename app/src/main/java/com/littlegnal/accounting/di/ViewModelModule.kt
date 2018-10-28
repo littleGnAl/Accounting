@@ -16,7 +16,7 @@
 
 package com.littlegnal.accounting.di
 
-import android.arch.lifecycle.ViewModelProvider
+import androidx.lifecycle.ViewModelProvider
 import com.littlegnal.accounting.base.ViewModelFactory
 import dagger.Binds
 import dagger.Module

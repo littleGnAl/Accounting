@@ -16,7 +16,7 @@
 
 package com.littlegnal.accounting.ui.main.adapter
 
-import android.support.v7.widget.AppCompatTextView
+import androidx.appcompat.widget.AppCompatTextView
 import android.view.View
 import com.airbnb.epoxy.EpoxyAttribute
 import com.airbnb.epoxy.EpoxyHolder

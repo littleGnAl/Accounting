@@ -16,9 +16,9 @@
 
 package com.littlegnal.accounting.db
 
-import android.arch.persistence.room.Database
-import android.arch.persistence.room.RoomDatabase
-import android.arch.persistence.room.TypeConverters
+import androidx.room.Database
+import androidx.room.RoomDatabase
+import androidx.room.TypeConverters
 import com.littlegnal.accounting.base.DB_VERSION
 
 @Database(entities = [Accounting::class], version = DB_VERSION)
