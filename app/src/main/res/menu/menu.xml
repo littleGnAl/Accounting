@@ -6,7 +6,7 @@
     tools:context=".ui.main.MainActivity"
     >
   <item
-      android:id="@+id/menu_summary"
+      android:id="@id/summaryFragment"
       android:icon="@drawable/ic_show_chart_black_24dp"
       android:title=""
       app:showAsAction="always"

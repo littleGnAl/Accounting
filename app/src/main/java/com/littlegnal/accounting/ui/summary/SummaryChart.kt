@@ -28,6 +28,7 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.ViewConfiguration
 import com.littlegnal.accounting.R
+import com.littlegnal.accounting.base.util.ChangeDetected
 import com.littlegnal.accounting.base.util.colorRes
 import com.littlegnal.accounting.base.util.dip
 import com.littlegnal.accounting.base.util.sp
@@ -39,22 +40,30 @@ import java.util.Date
  */
 class SummaryChart : View {
 
-  var months: List<Pair<String, Date>>? = null
+  private var months: List<Pair<String, Date>>? = null
 
   private var max: Float = -1.0f
 
   private var min: Float = -1.0f
 
-  var points: List<Pair<Int, Float>>? = null
+  private var points: List<Pair<Int, Float>>? = null
     set(value) {
       field = value
       max = value?.maxBy { it.second }?.second ?: -1.0f
       min = value?.minBy { it.second }?.second ?: -1.0f
     }
 
-  var selectedIndex: Int = -1
+  private var selectedIndex: Int = -1
 
-  var values: List<String>? = null
+  private var values: List<String>? = null
+
+  var summaryChartData by ChangeDetected(SummaryChartData()) {
+    months = it.months
+    points = it.points
+    values = it.values
+    selectedIndex = it.selectedIndex
+    postInvalidate()
+  }
 
   private val DOT_RADIUS = dip(3)
   private val SELECTED_DOT_RADIUS = dip(6)

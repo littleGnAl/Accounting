@@ -41,4 +41,9 @@ class DeleteConfirmDialog : DialogFragment() {
           .create()
     }!!
   }
+
+  override fun onDestroyView() {
+    okClickListener = null
+    super.onDestroyView()
+  }
 }

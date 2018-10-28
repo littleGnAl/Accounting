@@ -1,42 +1,30 @@
-/*
- * Copyright (C) 2017 littlegnal
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.littlegnal.accounting.ui.summary
 
 import android.content.Context
-import com.littlegnal.accounting.R
-import com.littlegnal.accounting.base.schedulers.TestSchedulerProvider
+import androidx.lifecycle.Lifecycle
+import com.littlegnal.accounting.R.string
+import com.littlegnal.accounting.base.RxImmediateSchedulerRule
+import com.littlegnal.accounting.base.TestLifecycleOwner
+import com.littlegnal.accounting.base.TestMvRxStateStore
 import com.littlegnal.accounting.db.AccountingDao
 import com.littlegnal.accounting.db.MonthTotal
 import com.littlegnal.accounting.db.TagAndTotal
 import com.littlegnal.accounting.ui.summary.adapter.SummaryListItem
 import io.reactivex.Maybe
-import io.reactivex.Observable
-import io.reactivex.observers.TestObserver
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.mockito.Mock
-import org.mockito.Mockito.`when`
+import org.mockito.Mockito
 import org.mockito.MockitoAnnotations
-import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Date
-import java.util.Locale
 
 class SummaryViewModelTest {
+
+  @Rule
+  @JvmField
+  val scheduler = RxImmediateSchedulerRule()
 
   @Mock
   private lateinit var applicationContext: Context
@@ -46,21 +34,29 @@ class SummaryViewModelTest {
 
   private lateinit var summaryViewModel: SummaryViewModel
 
-  private lateinit var testObserver: TestObserver<SummaryViewState>
+  private lateinit var owner: TestLifecycleOwner
+
+  private lateinit var testMvRxStateStore: TestMvRxStateStore<SummaryMvRxViewState>
 
   @Before
   fun setUp() {
     MockitoAnnotations.initMocks(this)
 
+    owner = TestLifecycleOwner()
+    owner.lifecycle.markState(Lifecycle.State.STARTED)
+
+    val initialState = SummaryMvRxViewState()
+    testMvRxStateStore = TestMvRxStateStore.create(initialState)
     summaryViewModel = SummaryViewModel(
-        SummaryActionProcessorHolder(TestSchedulerProvider(), applicationContext, accountingDao)
+        initialState,
+        testMvRxStateStore,
+        accountingDao,
+        applicationContext
     )
-    testObserver = summaryViewModel.states()
-        .test()
   }
 
   @Test
-  fun test_initialIntent_and_switchMonthIntent() {
+  fun loadSummary_and_switchMonth() {
     val months: MutableList<Pair<String, Date>> = mutableListOf()
     val points: MutableList<Pair<Int, Float>> = mutableListOf()
     val values: MutableList<String> = mutableListOf()
@@ -84,13 +80,15 @@ class SummaryViewModelTest {
     for (i in 0 until 6) {
       val monthCalendar = Calendar.getInstance()
           .apply { time = tempCalendar.time }
-      val monthString = MONTH_FORMAT.format(monthCalendar.time)
+      val monthString = summaryViewModel.monthFormat.format(monthCalendar.time)
       months.add(Pair(monthString, monthCalendar.time))
       tempCalendar.add(Calendar.MONTH, 1)
     }
 
-    val firstMonthTotal = MonthTotal(YEAR_MONTH_FORMAT.format(firstCalendar.time), 100.0f)
-    val lastMonthTotal = MonthTotal(YEAR_MONTH_FORMAT.format(latestCalendar.time), 200.0f)
+    val firstMonthTotal = MonthTotal(summaryViewModel.yearMonthFormat
+        .format(firstCalendar.time), 100.0f)
+    val lastMonthTotal = MonthTotal(summaryViewModel.yearMonthFormat
+        .format(latestCalendar.time), 200.0f)
     val monthTotalList = listOf(lastMonthTotal, firstMonthTotal)
     points.add(Pair(0, firstMonthTotal.total))
     points.add(Pair(5, lastMonthTotal.total))
@@ -109,131 +107,70 @@ class SummaryViewModelTest {
         "¥200.00"
     )
 
-    `when`(applicationContext.getString(R.string.amount_format, 100.0f))
+    Mockito.`when`(applicationContext.getString(string.amount_format, 100.0f))
         .thenReturn("¥100.00")
-    `when`(applicationContext.getString(R.string.amount_format, 200.0f))
+    Mockito.`when`(applicationContext.getString(string.amount_format, 200.0f))
         .thenReturn("¥200.00")
-    `when`(accountingDao.getMonthTotalAmount(6))
+    Mockito.`when`(accountingDao.getMonthTotalAmount(6))
         .thenReturn(Maybe.just(monthTotalList))
-    `when`(
-        accountingDao.getGroupingMonthTotalAmount(
-            latestCalendar.get(Calendar.YEAR).toString(),
-            ensureNum2Length(latestCalendar.get(Calendar.MONTH) + 1)
-        )
-    )
-        .thenReturn(listOf(tagAndTotal2))
-    `when`(
+    Mockito.`when`(
+        accountingDao.getLastGroupingMonthTotalAmountObservable())
+        .thenReturn(Maybe.just(listOf(tagAndTotal2)))
+    Mockito.`when`(
         accountingDao.getGroupingMonthTotalAmountObservable(
             firstCalendar.get(Calendar.YEAR).toString(),
-            ensureNum2Length(firstCalendar.get(Calendar.MONTH) + 1)
-        )
-    )
+            summaryViewModel.ensureNum2Length(firstCalendar.get(Calendar.MONTH) + 1)))
         .thenReturn(Maybe.just(listOf(tagAndTotal1)))
 
-    `when`(
-        accountingDao.getGroupingMonthTotalAmountObservable(
+    Mockito.`when`(accountingDao.getGroupingMonthTotalAmountObservable(
             latestCalendar.get(Calendar.YEAR).toString(),
-            ensureNum2Length(latestCalendar.get(Calendar.MONTH) + 1)
-        )
-    )
+            summaryViewModel.ensureNum2Length(latestCalendar.get(Calendar.MONTH) + 1)))
         .thenReturn(Maybe.just(listOf(tagAndTotal2)))
 
-    val intents = Observable.merge(
-        Observable.just(SummaryIntent.InitialIntent()),
-        Observable.just(SummaryIntent.SwitchMonthIntent(firstCalendar.time)),
-        Observable.just(SummaryIntent.SwitchMonthIntent(latestCalendar.time))
-    )
-    summaryViewModel.processIntents(intents)
-    testObserver.assertValueAt(
-        1,
-        SummaryViewState(
-            true,
-            null,
-            listOf(),
-            listOf(),
-            listOf(),
-            0,
-            listOf(),
-            false
-        )
-    )
-    testObserver.assertValueAt(
-        2,
-        SummaryViewState(
-            false,
-            null,
-            points,
-            months,
-            values,
-            5,
-            listOf(summaryItemList2),
-            false
-        )
-    )
-    testObserver.assertValueAt(
-        3,
-        SummaryViewState(
-            true,
-            null,
-            points,
-            months,
-            values,
-            5,
-            listOf(summaryItemList2),
-            true
-        )
-    )
-    testObserver.assertValueAt(
-        4,
-        SummaryViewState(
-            false,
-            null,
-            points,
-            months,
-            values,
-            5,
-            listOf(summaryItemList1),
-            true
-        )
-    )
-    testObserver.assertValueAt(
-        5,
-        SummaryViewState(
-            true,
-            null,
-            points,
-            months,
-            values,
-            5,
-            listOf(summaryItemList1),
-            true
-        )
-    )
-    testObserver.assertValueAt(
-        6,
-        SummaryViewState(
-            false,
-            null,
-            points,
-            months,
-            values,
-            5,
-            listOf(summaryItemList2),
-            true
-        )
-    )
-  }
+    summaryViewModel.loadSummary()
+    summaryViewModel.switchMonth(firstCalendar.time)
+    summaryViewModel.switchMonth(latestCalendar.time)
 
-  private fun ensureNum2Length(num: Int): String =
-    if (num < 10) {
-      "0$num"
-    } else {
-      num.toString()
+    val state1 = SummaryMvRxViewState(
+            isLoading = true,
+            error = null,
+            summaryChartData = SummaryChartData(),
+            summaryItemList = listOf())
+    val state2 = SummaryMvRxViewState(
+            isLoading = false,
+            error = null,
+            summaryChartData = SummaryChartData(points, months, values, 5),
+            summaryItemList = listOf(summaryItemList2))
+    val state3 = SummaryMvRxViewState(
+            isLoading = true,
+            error = null,
+            summaryChartData = SummaryChartData(points, months, values, 5),
+            summaryItemList = listOf(summaryItemList2))
+    val state4 = SummaryMvRxViewState(
+            isLoading = false,
+            error = null,
+            summaryChartData = SummaryChartData(points, months, values, 5),
+            summaryItemList = listOf(summaryItemList1))
+    val state5 = SummaryMvRxViewState(
+            isLoading = true,
+            error = null,
+            summaryChartData = SummaryChartData(points, months, values, 5),
+            summaryItemList = listOf(summaryItemList1))
+    val state6 = SummaryMvRxViewState(
+            isLoading = false,
+            error = null,
+            summaryChartData = SummaryChartData(points, months, values, 5),
+            summaryItemList = listOf(summaryItemList2))
+
+    testMvRxStateStore.testAllStates { stateList ->
+        stateList.size == 7 &&
+            stateList[0] == SummaryMvRxViewState() &&
+            stateList[1] == state1 &&
+            stateList[2] == state2 &&
+            stateList[3] == state3 &&
+            stateList[4] == state4 &&
+            stateList[5] == state5 &&
+            stateList[6] == state6
     }
-
-  companion object {
-    private val YEAR_MONTH_FORMAT = SimpleDateFormat("yyyy-MM")
-
-    private val MONTH_FORMAT = SimpleDateFormat("MMM", Locale.getDefault())
   }
 }

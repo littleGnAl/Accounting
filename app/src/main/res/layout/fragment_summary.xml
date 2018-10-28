@@ -5,21 +5,13 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     >
-  <include
-      layout="@layout/base_app_bar_layout"
-      android:layout_width="0dp"
-      android:layout_height="wrap_content"
-      app:layout_constraintLeft_toLeftOf="parent"
-      app:layout_constraintRight_toRightOf="parent"
-      app:layout_constraintTop_toTopOf="parent"
-      />
   <com.littlegnal.accounting.ui.summary.SummaryChart
       android:id="@+id/cv_summary_chart"
       android:layout_width="0dp"
       android:layout_height="200dp"
       app:layout_constraintLeft_toLeftOf="parent"
       app:layout_constraintRight_toRightOf="parent"
-      app:layout_constraintTop_toBottomOf="@+id/base_app_bar"
+      app:layout_constraintTop_toTopOf="parent"
       />
   <View
       android:layout_width="0dp"
@@ -29,7 +21,7 @@
       app:layout_constraintRight_toRightOf="parent"
       app:layout_constraintTop_toBottomOf="@+id/cv_summary_chart"
       />
-  <androidx.recyclerview.widget.RecyclerView
+  <com.airbnb.epoxy.EpoxyRecyclerView
       android:id="@+id/rv_summary_list"
       android:layout_width="0dp"
       android:layout_height="0dp"

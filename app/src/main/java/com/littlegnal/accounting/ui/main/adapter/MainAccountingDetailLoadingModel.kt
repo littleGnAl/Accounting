@@ -31,7 +31,7 @@ abstract class MainAccountingDetailLoadingModel :
 
     var pbLoading: ProgressBar? = null
 
-    override fun bindView(itemView: View?) {
+    override fun bindView(itemView: View) {
       pbLoading = itemView?.findViewById(R.id.pb_main_accounting_detail_loading)
     }
   }

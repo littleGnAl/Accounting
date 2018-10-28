@@ -37,7 +37,7 @@ abstract class MainAccountingDetailContentModel :
   @EpoxyAttribute(EpoxyAttribute.Option.DoNotHash)
   var longClickListener: View.OnLongClickListener? = null
 
-  override fun bind(holder: ContentModel?) {
+  override fun bind(holder: ContentModel) {
     super.bind(holder)
 
     holder?.tvTime?.text = time
@@ -55,7 +55,7 @@ abstract class MainAccountingDetailContentModel :
     lateinit var tvRemarks: AppCompatTextView
     lateinit var tvAmount: AppCompatTextView
 
-    override fun bindView(itemView: View?) {
+    override fun bindView(itemView: View) {
       itemView?.let {
         parent = it.findViewById(R.id.main_accounting_detail_header_parent)
         tvTime = it.findViewById(R.id.tv_main_accounting_detail_content_time)

@@ -17,15 +17,15 @@
 package com.littlegnal.accounting.base
 
 import android.content.Context
-import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.Toolbar
 import android.view.View
 import android.view.ViewGroup
 import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
+import com.airbnb.mvrx.BaseMvRxActivity
 import com.littlegnal.accounting.R
 
-open class BaseActivity : AppCompatActivity() {
+open class BaseActivity : BaseMvRxActivity() {
   protected lateinit var toolbar: Toolbar
 
   override fun setContentView(layoutResID: Int) {

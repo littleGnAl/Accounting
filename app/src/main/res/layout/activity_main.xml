@@ -7,50 +7,37 @@
     android:layout_height="match_parent"
     tools:context=".ui.main.MainActivity"
     >
-  <include
-      layout="@layout/base_app_bar_layout"
+  <com.google.android.material.appbar.AppBarLayout
+      xmlns:android="http://schemas.android.com/apk/res/android"
+      xmlns:app="http://schemas.android.com/apk/res-auto"
+      android:id="@+id/base_app_bar"
       android:layout_width="0dp"
       android:layout_height="wrap_content"
-      app:layout_constraintLeft_toLeftOf="parent"
-      app:layout_constraintRight_toRightOf="parent"
+      app:layout_constraintStart_toStartOf="parent"
+      app:layout_constraintEnd_toEndOf="parent"
       app:layout_constraintTop_toTopOf="parent"
-      />
-  <androidx.coordinatorlayout.widget.CoordinatorLayout
+      android:background="@null"
+      >
+    <androidx.appcompat.widget.Toolbar
+        android:id="@+id/base_toolbar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="?attr/colorPrimary"
+        android:minHeight="?attr/actionBarSize"
+        android:theme="@style/ToolbarTheme"
+        app:popupTheme="@style/ToolbarPopupTheme"
+        />
+  </com.google.android.material.appbar.AppBarLayout>
+  <fragment
+      android:id="@+id/nav_host_fragment"
+      android:name="androidx.navigation.fragment.NavHostFragment"
       android:layout_width="0dp"
       android:layout_height="0dp"
       app:layout_constraintBottom_toBottomOf="parent"
       app:layout_constraintLeft_toLeftOf="parent"
       app:layout_constraintRight_toRightOf="parent"
       app:layout_constraintTop_toBottomOf="@+id/base_app_bar"
-      >
-
-    <androidx.recyclerview.widget.RecyclerView
-        android:id="@+id/rv_main_detail"
-        android:layout_width="match_parent"
-        android:layout_height="match_parent"
-        android:overScrollMode="never"
-        />
-    <androidx.appcompat.widget.AppCompatTextView
-        android:id="@+id/tv_main_accounting_no_data"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_gravity="center"
-        android:text="@string/main_accounting_no_accounting_records"
-        android:textColor="#888888"
-        android:textSize="18sp"
-        android:visibility="gone"
-        />
-
-    <com.google.android.material.floatingactionbutton.FloatingActionButton
-        android:id="@+id/fab_main_add_accounting"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginBottom="@dimen/fab_margin"
-        android:layout_marginEnd="@dimen/fab_margin"
-        android:src="@drawable/ic_add_white_24dp"
-        app:fabSize="normal"
-        app:layout_anchor="@+id/rv_main_detail"
-        app:layout_anchorGravity="right|bottom"
-        />
-  </androidx.coordinatorlayout.widget.CoordinatorLayout>
+      app:navGraph="@navigation/nav_graph"
+      app:defaultNavHost="true"
+      />
 </androidx.constraintlayout.widget.ConstraintLayout>

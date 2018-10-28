@@ -20,26 +20,18 @@ import android.app.Application
 import androidx.room.Room
 import android.content.Context
 import com.littlegnal.accounting.base.DB_NAME
-import com.littlegnal.accounting.base.eventbus.RxBus
-import com.littlegnal.accounting.base.schedulers.BaseSchedulerProvider
-import com.littlegnal.accounting.base.schedulers.SchedulerProvider
-import com.littlegnal.accounting.db.Accounting
 import com.littlegnal.accounting.db.AccountingDao
 import com.littlegnal.accounting.db.AppDataBase
-import com.littlegnal.accounting.ui.addedit.AddOrEditBuilderModule
 import com.littlegnal.accounting.ui.main.MainBuilderModule
-import com.littlegnal.accounting.ui.summary.SummaryBuilderModule
+import com.littlegnal.accounting.ui.main.AssistedViewModelModule
 import dagger.Module
 import dagger.Provides
-import io.reactivex.subjects.PublishSubject
 import javax.inject.Singleton
 
 @Module(
     includes = [
-      ViewModelModule::class,
-      AddOrEditBuilderModule::class,
-      SummaryBuilderModule::class,
-      MainBuilderModule::class
+      MainBuilderModule::class,
+      AssistedViewModelModule::class
     ]
 )
 class AppModule {
@@ -58,16 +50,4 @@ class AppModule {
   @Singleton
   @Provides
   fun provideAccountingDao(appDataBase: AppDataBase): AccountingDao = appDataBase.accountingDao()
-
-  @Singleton
-  @Provides
-  fun provideAddOrUpdateAccountingObservable(): PublishSubject<Accounting> = PublishSubject.create()
-
-  @Singleton
-  @Provides
-  fun provideBaseSchedulerProvider(): BaseSchedulerProvider = SchedulerProvider()
-
-  @Singleton
-  @Provides
-  fun provideRxBus() = RxBus()
 }
