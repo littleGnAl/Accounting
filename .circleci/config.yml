@@ -25,6 +25,7 @@ save_cache: &save_cache
         paths:
             - ~/.gradle/caches
             - ~/.gradle/wrapper
+            - /opt/android/sdk
             - ~/.m2
 
 # Persist code
