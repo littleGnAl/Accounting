@@ -19,6 +19,7 @@ package com.littlegnal.accounting
 import android.app.Activity
 import android.app.Application
 import com.littlegnal.accounting.di.AppInjector
+import com.squareup.leakcanary.LeakCanary
 import dagger.android.AndroidInjector
 import dagger.android.DispatchingAndroidInjector
 import dagger.android.HasActivityInjector
@@ -34,6 +35,11 @@ open class App : Application(), HasActivityInjector {
 
   override fun onCreate() {
     super.onCreate()
+
+    if (LeakCanary.isInAnalyzerProcess(this)) {
+      return
+    }
+    LeakCanary.install(this)
 
     AppInjector.initDI(this)
   }

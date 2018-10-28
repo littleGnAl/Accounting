@@ -17,14 +17,12 @@
 package com.littlegnal.accounting
 
 import android.app.Application
+import com.facebook.flipper.android.AndroidFlipperClient
+import com.facebook.flipper.android.utils.FlipperUtils
+import com.facebook.flipper.plugins.inspector.DescriptorMapping
+import com.facebook.flipper.plugins.inspector.InspectorFlipperPlugin
 import com.facebook.soloader.SoLoader
-import com.facebook.sonar.android.AndroidSonarClient
-import com.facebook.sonar.android.utils.SonarUtils
-import com.facebook.sonar.plugins.inspector.DescriptorMapping
-import com.facebook.sonar.plugins.inspector.InspectorSonarPlugin
-import com.facebook.sonar.plugins.sharedpreferences.SharedPreferencesSonarPlugin
 import com.facebook.stetho.Stetho
-import com.squareup.leakcanary.LeakCanary
 import timber.log.Timber
 
 /**
@@ -33,11 +31,6 @@ import timber.log.Timber
 class DebugApp : App() {
 
   override fun onCreate() {
-    if (LeakCanary.isInAnalyzerProcess(this)) {
-      return
-    }
-    LeakCanary.install(this)
-
     super.onCreate()
     Stetho.initializeWithDefaults(this)
 
@@ -45,13 +38,10 @@ class DebugApp : App() {
 
     SoLoader.init(this, false)
 
-    if (SonarUtils.shouldEnableSonar(this)) {
-      with(AndroidSonarClient.getInstance(this)) {
-        addPlugin(InspectorSonarPlugin(this@DebugApp, DescriptorMapping.withDefaults()))
-        addPlugin(SharedPreferencesSonarPlugin(this@DebugApp))
-
-        start()
-      }
+    if (BuildConfig.DEBUG && FlipperUtils.shouldEnableFlipper(this)) {
+      val client = AndroidFlipperClient.getInstance(this)
+      client.addPlugin(InspectorFlipperPlugin(this, DescriptorMapping.withDefaults()))
+      client.start()
     }
   }
 }

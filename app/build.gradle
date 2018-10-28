@@ -106,6 +106,9 @@ dependencies {
   debugImplementation libraries.stetho
   // leakcanary
   debugImplementation libraries.leakCanary
+  releaseImplementation libraries.leakCanaryNoOp
+  testImplementation libraries.leakCanaryNoOp
+  debugImplementation libraries.leakCanarySupportFragment
 
   ktlint libraries.ktlint
 
@@ -121,5 +124,7 @@ dependencies {
   androidTestImplementation test.archComponentCoreTest
   androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.0'
 
-  debugImplementation libraries.sonar
+//  debugImplementation libraries.sonar
+
+  debugImplementation 'com.facebook.flipper:flipper:0.10.0'
 }
