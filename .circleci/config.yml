@@ -1,30 +1,103 @@
 version: 2
-jobs:
-  build:
-    working_directory: ~/code
+
+workspace: &workspace
+    ~/Accounting
+
+android_build_environment: &android_build_environment
+    working_directory: *workspace
+    resource_class: xlarge
     docker:
-      - image: circleci/android:api-27-alpha
+        - image: circleci/android:api-28-alpha
     environment:
-      JVM_OPTS: -Xmx3200m
-    steps:
-      - checkout
-      - restore_cache:
-          key: jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
-      - run:
-          name: Download Dependencies
-          command: ./gradlew androidDependencies
-      - save_cache:
-          paths:
-            - ~/.gradle
-          key: jars-{{ checksum "build.gradle" }}-{{ checksum  "app/build.gradle" }}
-      - run:
-          name: Run Tests
-          command: ./gradlew check test
-      - store_artifacts:
-          path: app/build/reports
-          destination: reports
-      - store_test_results:
-          path: app/build/test-results
+        JVM_OPTS: -Xmx3200m
+        TERM: dumb
+
+cache_key: &cache_key
+    key: jars-{{ checksum "build.gradle" }}-{{ checksum "app/build.gradle" }}-{{ checksum "dependencies.gradle"}}-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}
+
+restore_cache: &restore_cache
+    restore_cache:
+        <<: *cache_key
+
+save_cache: &save_cache
+    save_cache:
+        <<: *cache_key
+        paths:
+            - ~/.gradle/caches
+            - ~/.gradle/wrapper
+            - ~/.m2
+
+# Persist code
+persist_code_to_workspace: &persist_code_to_workspace
+    persist_to_workspace:
+        root: /home/circleci/Accounting/
+        paths: .
+
+persist_apk_to_workspace: &persist_apk_to_workspace
+    persist_to_workspace:
+        root: .
+        paths:
+            - app/build/outputs/apk
+
+attach_workspace: &attach_workspace
+    attach_workspace:
+        at: *workspace
+
+jobs:
+    checkout_code:
+        <<: *android_build_environment
+        steps:
+            - checkout
+            - *persist_code_to_workspace
+
+    build:
+        <<: *android_build_environment
+        steps:
+            - *attach_workspace
+
+            - *restore_cache
+
+            - run:
+                name: Generating apk
+                command: ./gradlew :app:assemble
+            - store_artifacts:
+                path: app/build/outputs/apk
+                destination: apk
+
+            - *save_cache  
+            - *persist_apk_to_workspace
+
+    test:
+        <<: *android_build_environment
+        steps:
+            - *attach_workspace
+
+            - *restore_cache
+
+            - run:
+                name: Lint and test
+                command: ./gradlew :app:check
+            - store_test_results:
+                path: app/build/test-results
+            - store_artifacts:
+                path: app/build/reports
+                destination: reports
+
+            - *save_cache 
+
+workflows:
+    version: 2
+
+    build_and_test:
+        jobs:
+            - checkout_code
+            - build:
+                requires: 
+                    - checkout_code
+            - test:
+                requires: 
+                    - checkout_code
+             
 
 
 
