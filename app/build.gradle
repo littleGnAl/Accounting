@@ -15,7 +15,7 @@ android {
     targetSdkVersion versions.targetSdkVersion
     versionCode 1
     versionName "1.0"
-    testInstrumentationRunner "android.support.test.runner.AndroidJUnitRunner"
+    testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
 
     javaCompileOptions {
       annotationProcessorOptions {
@@ -72,11 +72,11 @@ task ktFormat(type: JavaExec, group: 'formatting') {
 }
 
 dependencies {
-  implementation libraries.kotlinStdlibJre7
+  implementation libraries.kotlinStdlibJdk7
   // support lib
-  implementation libraries.supportAppcompatV7
-  implementation libraries.supportDesign
-  implementation libraries.constraintLayout
+  implementation 'androidx.appcompat:appcompat:1.0.0'
+  implementation 'com.google.android.material:material:1.0.0'
+  implementation 'androidx.constraintlayout:constraintlayout:2.0.0-alpha2'
   // timber
   implementation libraries.timber
   // dagger
@@ -86,10 +86,10 @@ dependencies {
   kapt libraries.dagger2Compiler
   kapt libraries.dagger2AndroidCompiler
   // architecture components
-  implementation libraries.archComponentRoom
-  kapt libraries.archComponentRoomCompiler
-  implementation libraries.archComponentRxJava2
-  implementation libraries.arch_lifecycle_extensions
+  implementation 'androidx.room:room-runtime:2.1.0-alpha01'
+  kapt 'androidx.room:room-compiler:2.1.0-alpha01'
+  implementation 'androidx.room:room-rxjava2:2.1.0-alpha01'
+  implementation 'androidx.lifecycle:lifecycle-extensions:2.0.0'
   // epoxy
   implementation libraries.epoxy
   kapt libraries.epoxyCompiler
@@ -113,16 +113,16 @@ dependencies {
   ktlint libraries.ktlint
 
   testImplementation test.junit
-  testImplementation test.archComponentRoomTest
-  testImplementation test.archComponentCoreTest
+  testImplementation 'androidx.room:room-testing:2.1.0-alpha01'
+  testImplementation 'androidx.arch.core:core-testing:2.0.0'
   testImplementation test.hamcrestAll
   testImplementation test.mockito
 
   androidTestImplementation test.junit
-  androidTestImplementation test.support_test_runner
-  androidTestImplementation test.archComponentRoomTest
-  androidTestImplementation test.archComponentCoreTest
-  androidTestImplementation 'com.android.support.test.espresso:espresso-core:3.0.0'
+  androidTestImplementation 'androidx.test:runner:1.1.0'
+  androidTestImplementation 'androidx.room:room-testing:2.1.0-alpha01'
+  androidTestImplementation 'androidx.arch.core:core-testing:2.0.0'
+  androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.0'
 
   debugImplementation libraries.flipper
 }

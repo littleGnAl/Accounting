@@ -17,8 +17,8 @@
 package com.littlegnal.accounting.ui.addedit
 
 import android.content.Context
-import android.support.v7.content.res.AppCompatResources
-import android.support.v7.widget.AppCompatCheckedTextView
+import androidx.appcompat.content.res.AppCompatResources
+import androidx.appcompat.widget.AppCompatCheckedTextView
 import android.util.AttributeSet
 import android.util.TypedValue
 import android.view.Gravity
