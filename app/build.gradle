@@ -40,9 +40,12 @@ android {
     correctErrorTypes = true
   }
 
-
   androidExtensions {
     experimental = true
+  }
+
+  testOptions {
+    unitTests.returnDefaultValues = true
   }
 }
 
@@ -97,7 +100,7 @@ dependencies {
   implementation libraries.rxAndroid2
   implementation libraries.rxJava2
   // rxbinding
-  implementation libraries.rxBindingRecyclerKotlin
+  implementation libraries.rxbinding_recyclerview
   implementation libraries.flexbox
   // rxrelay
   implementation libraries.rxrelay
@@ -125,4 +128,14 @@ dependencies {
   androidTestImplementation 'androidx.test.espresso:espresso-core:3.1.0'
 
   debugImplementation libraries.flipper
+
+  implementation libraries.mvrx
+
+  compileOnly 'com.squareup.inject:assisted-inject-annotations-dagger2:0.3.0'
+  kapt 'com.squareup.inject:assisted-inject-processor-dagger2:0.3.0'
+
+  implementation "android.arch.navigation:navigation-fragment-ktx:1.0.0-alpha07"
+  implementation "android.arch.navigation:navigation-ui-ktx:1.0.0-alpha07"
+
+  testImplementation "org.robolectric:robolectric:4.0.2"
 }

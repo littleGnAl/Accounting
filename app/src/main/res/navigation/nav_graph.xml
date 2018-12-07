@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="utf-8"?>
+<navigation xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/nav_graph"
+    app:startDestination="@id/mainFragment"
+    >
+  <fragment
+      android:id="@+id/mainFragment"
+      android:name="com.littlegnal.accounting.ui.main.MainFragment">
+    <action
+        android:id="@+id/action_mainFragment_to_addOrEditFragment"
+        app:destination="@id/addOrEditFragment"
+        />
+    <action
+        android:id="@+id/action_mainFragment_to_summaryFragment"
+        app:destination="@id/summaryFragment"
+        />
+  </fragment>
+  <fragment
+      android:id="@+id/addOrEditFragment"
+      android:name="com.littlegnal.accounting.ui.addedit.AddOrEditFragment"
+      />
+  <fragment
+      android:id="@+id/summaryFragment"
+      android:name="com.littlegnal.accounting.ui.summary.SummaryFragment"
+      />
+</navigation>

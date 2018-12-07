@@ -1,100 +1,432 @@
-/*
- * Copyright (C) 2017 littlegnal
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.littlegnal.accounting.ui.main
 
+import android.annotation.SuppressLint
+import android.content.Context
 import androidx.annotation.VisibleForTesting
-import com.littlegnal.accounting.base.eventbus.RxBus
-import com.littlegnal.accounting.base.mvi.BaseViewModel
-import com.littlegnal.accounting.base.mvi.MviAction
-import com.littlegnal.accounting.base.mvi.MviIntent
-import com.littlegnal.accounting.ui.addedit.AddOrEditEvent
+import androidx.fragment.app.FragmentActivity
+import com.airbnb.mvrx.BaseMvRxViewModel
+import com.airbnb.mvrx.Fail
+import com.airbnb.mvrx.Loading
+import com.airbnb.mvrx.MvRxStateStore
+import com.airbnb.mvrx.MvRxViewModelFactory
+import com.airbnb.mvrx.RealMvRxStateStore
+import com.airbnb.mvrx.Success
+import com.littlegnal.accounting.R
+import com.littlegnal.accounting.base.MvRxViewModel
+import com.littlegnal.accounting.base.util.toHms0
+import com.littlegnal.accounting.db.Accounting
+import com.littlegnal.accounting.db.AccountingDao
+import com.littlegnal.accounting.ui.main.adapter.MainAccountingDetail
+import com.littlegnal.accounting.ui.main.adapter.MainAccountingDetailContent
+import com.littlegnal.accounting.ui.main.adapter.MainAccountingDetailHeader
+import com.squareup.inject.assisted.Assisted
+import com.squareup.inject.assisted.AssistedInject
 import io.reactivex.Observable
-import io.reactivex.ObservableTransformer
-import io.reactivex.subjects.PublishSubject
-import java.util.Calendar
-import javax.inject.Inject
+import io.reactivex.schedulers.Schedulers
+import java.text.SimpleDateFormat
+import java.util.Date
 
-/**
- * 主页[MainViewModel]
- */
-class MainViewModel @Inject constructor(
-  private val mainActionProcessorHolder: MainActionProcessorHolder,
-  private val rxBus: RxBus
-) : BaseViewModel<MainIntent, MainViewState>() {
+class MainViewModel @AssistedInject constructor(
+  @Assisted initialState: MainState,
+  @Assisted stateStore: MvRxStateStore<MainState>,
+  private val accountingDao: AccountingDao,
+  private val applicationContext: Context
+) : MvRxViewModel<MainState>(initialState, stateStore) {
 
-  @VisibleForTesting
-  val now: Calendar = Calendar.getInstance()
-
-  override fun mergeExtraIntents(intents: Observable<MainIntent>): Observable<MainIntent> {
-    return super.mergeExtraIntents(intents)
-        .mergeWith(extraIntents())
+  @AssistedInject.Factory
+  interface Factory {
+    fun create(
+      initialState: MainState,
+      stateStore: MvRxStateStore<MainState>
+    ): MainViewModel
   }
 
-  private fun extraIntents(): Observable<MainIntent> =
-    rxBus.asFlowable().toObservable()
-        .filter { it is AddOrEditEvent }
-        .map { it as AddOrEditEvent }
-        .map {
-          MainIntent.AddOrEditAccountingIntent(it.isAddedAccounting, it.accounting)
+  init {
+      loadList(lastDate = initialState.lastDate)
+  }
+
+  fun loadList(
+    accountingDetailList: List<MainAccountingDetail> = emptyList(),
+    lastDate: Date
+  ) {
+    accountingDao.queryPreviousAccounting(lastDate, ONE_PAGE_SIZE.toLong())
+        .toObservable()
+        .map { accountingList ->
+          val newAdapterList = accountingDetailList.toMutableList()
+
+          val isFirstPage = newAdapterList.isEmpty()
+          if (isFirstPage) {
+            newAdapterList.addAll(createFirstPageList(lastDate, accountingList))
+//            copy(
+//                error = null,
+//                isLoading = false,
+//                accountingDetailList = newAdapterList,
+//                isNoMoreData = accountingList.size < ONE_PAGE_SIZE,
+//                isNoData = accountingList.isEmpty()
+//            )
+          } else {
+            newAdapterList.addAll(createAccountingDetailList(lastDate, accountingList))
+
+            newAdapterList.distinctBy {
+              if (it is MainAccountingDetailContent) {
+                return@distinctBy it.id.toString()
+              }
+
+              if ((it is MainAccountingDetailHeader)) {
+                return@distinctBy it.title
+              }
+
+              ""
+            }
+
+//                .let {
+//                  previousState.copy(
+//                      error = null,
+//                      isLoading = false,
+//                      accountingDetailList = it,
+//                      isNoMoreData = accountingList.size < ONE_PAGE_SIZE,
+//                      isNoData = false
+//                  )
+//                }
+          }
+          newAdapterList to (accountingList.size < ONE_PAGE_SIZE)
         }
+        .subscribeOn(Schedulers.io())
+        .execute {
+          when (it) {
+            is Success -> {
+              val (list, isNoMoreData) = it()!!
+              copy(
+                error = null,
+                isLoading = false,
+                accountingDetailList = list,
+                isNoData = list.isEmpty(),
+                isNoMoreData = isNoMoreData)
+            }
+            is Fail -> {
+              copy(error = it.error, isLoading = false)
+            }
+            is Loading -> {
+              copy(isLoading = true)
+            }
+            else -> {
+              copy()
+            }
+          }
+        }
+  }
 
-  override fun compose(intentsSubject: PublishSubject<MainIntent>): Observable<MainViewState> =
-    intentsSubject
-        .compose(intentFilter)
-        .map(this::actionFromIntent)
-        .compose(mainActionProcessorHolder.actionProcessorWithReducer)
-        .replay(1)
-        .autoConnect(0)
+  private fun createAccountingDetailList(
+    lastDate: Date,
+    accountingList: List<Accounting>
+  ): MutableList<MainAccountingDetail> {
+    var lastDateNum: Int = dateNumFormat.format(lastDate)
+        .toInt()
 
-  /**
-   * 只取一次初始化[MviIntent]和其他[MviIntent]，过滤掉配置改变（如屏幕旋转）后重新传递过来的初始化
-   * [MviIntent]，导致重新加载数据
-   */
-  private val intentFilter: ObservableTransformer<MainIntent, MainIntent> =
-    ObservableTransformer { intents ->
-      intents.publish { shared ->
-        Observable.merge(
-            shared.ofType(MainIntent.InitialIntent::class.java).take(1),
-            shared.filter { it !is MainIntent.InitialIntent }
-        )
+    val detailList: MutableList<MainAccountingDetail> = mutableListOf()
+
+    for (accounting in accountingList) {
+      val createTime = accounting.createTime
+      val accountingDateNum: Int = dateNumFormat.format(createTime)
+          .toInt()
+      if (accountingDateNum != lastDateNum) {
+        detailList.add(createHeader(createTime))
+        lastDateNum = accountingDateNum
       }
+
+      detailList.add(createDetailContent(accounting))
     }
 
-  /**
-   * 把[MviIntent]转换为[MviAction]
-   */
-  private fun actionFromIntent(mainIntent: MainIntent): MainAction {
-    return when (mainIntent) {
-      is MainIntent.InitialIntent -> {
-        MainAction.LoadAccountingsAction(now.time)
-      }
-      is MainIntent.LoadNextPageIntent -> {
-        MainAction.LoadAccountingsAction(mainIntent.lastDate)
-      }
-      is MainIntent.DeleteAccountingIntent -> {
-        MainAction.DeleteAccountingAction(mainIntent.deletedId)
-      }
-      is MainIntent.AddOrEditAccountingIntent -> {
-        if (mainIntent.isAddedAccounting) {
-          MainAction.AddAccountingAction(mainIntent.accounting)
+    return detailList
+  }
+
+  private fun createFirstPageList(
+    lastDate: Date,
+    accountingList: List<Accounting>
+  ): List<MainAccountingDetail> {
+    if (accountingList.isEmpty()) return listOf()
+    val accountingDetailList = createAccountingDetailList(lastDate, accountingList)
+    val maybeHeader: MainAccountingDetail = accountingDetailList[0]
+    if (maybeHeader !is MainAccountingDetailHeader) {
+      accountingDetailList.add(0, createHeader(lastDate))
+    }
+
+    return accountingDetailList
+  }
+
+  private fun createHeaderTitle(createTime: Date): String = oneDayFormat.format(createTime)
+
+  private fun createHeader(createTime: Date): MainAccountingDetailHeader {
+    val title: String = createHeaderTitle(createTime)
+    val sum = accountingDao.sumOfDay(createTime.toHms0().time / 1000)
+    val sumString: String = applicationContext.getString(
+        R.string.main_accounting_detail_header_sum, sum
+    )
+    return MainAccountingDetailHeader(title, sumString)
+  }
+
+  private fun createDetailContent(accounting: Accounting): MainAccountingDetailContent {
+    return MainAccountingDetailContent(
+        accounting.id,
+        applicationContext.getString(R.string.amount_format, accounting.amount),
+        accounting.tagName,
+        accounting.remarks,
+        timeFormat.format(accounting.createTime),
+        accounting.createTime
+    )
+  }
+
+  fun addOrEditAccounting(
+    accountingDetailList: List<MainAccountingDetail>,
+    accountingId: Int,
+    amount: Float,
+    tagName: String,
+    showDate: String,
+    remarks: String?
+  ) {
+    if (accountingId == -1) {
+      addAccounting(accountingDetailList, amount, tagName, showDate, remarks)
+    } else {
+      updateAccounting(accountingDetailList, accountingId, amount, tagName, showDate, remarks)
+    }
+  }
+
+  private fun addAccounting(
+    accountingDetailList: List<MainAccountingDetail>,
+    amount: Float,
+    tagName: String,
+    showDate: String,
+    remarks: String?
+  ) {
+    Observable.fromCallable {
+      val accounting = Accounting(
+          amount,
+          dateTimeFormat.parse(showDate),
+          tagName,
+          remarks
+      )
+      val insertedId = accountingDao.insertAccounting(accounting)
+      accounting.id = insertedId.toInt()
+      val newContent = createDetailContent(accounting)
+      val newAccountingList = accountingDetailList.toMutableList()
+      if (newAccountingList.isEmpty()) {
+        newAccountingList.add(createHeader(accounting.createTime))
+        newAccountingList.add(newContent)
+      } else {
+        val title: String = createHeaderTitle(accounting.createTime)
+        val existHeaderIndex = newAccountingList.indexOfFirst {
+          it is MainAccountingDetailHeader && it.title == title
+        }
+        if (existHeaderIndex != -1) {
+          var insertContentIndex = -1
+          for (i in existHeaderIndex + 1 until newAccountingList.size) {
+            val tempContent = newAccountingList[i]
+            if ((tempContent is MainAccountingDetailContent &&
+                    tempContent.createTime <= accounting.createTime) ||
+                tempContent is MainAccountingDetailHeader) {
+              insertContentIndex = i
+              break
+            }
+          }
+
+          if (insertContentIndex != -1) {
+            val addedHeader = createHeader(accounting.createTime)
+            newAccountingList[existHeaderIndex] = addedHeader
+            newAccountingList.add(insertContentIndex, newContent)
+          }
         } else {
-          MainAction.UpdateAccountingAction(mainIntent.accounting)
+          val newHeaderIndex = newAccountingList.indexOfFirst {
+            it is MainAccountingDetailHeader && it.title < title
+          }
+
+          if (newHeaderIndex != -1) {
+            val addedHeader = createHeader(accounting.createTime)
+              newAccountingList.add(newHeaderIndex, newContent)
+              newAccountingList.add(newHeaderIndex, addedHeader)
+          }
         }
       }
+      newAccountingList
+    }
+    .subscribeOn(Schedulers.io())
+    .execute {
+      when (it) {
+        is Loading -> {
+          copy(error = null, isLoading = true)
+        }
+        is Fail -> {
+          copy(error = it.error, isLoading = false)
+        }
+        is Success -> {
+          val list = it()!!
+          copy(
+              accountingDetailList = list,
+              isLoading = false,
+              error = null,
+              isNoData = list.isEmpty(),
+              isNoMoreData = list.size < ONE_PAGE_SIZE)
+        }
+        else -> { copy() }
+      }
+    }
+  }
+
+  private fun updateAccounting(
+    accountingDetailList: List<MainAccountingDetail>,
+    accountingId: Int,
+    amount: Float,
+    tagName: String,
+    showDate: String,
+    remarks: String?
+  ) {
+    Observable.fromCallable {
+      val accounting = Accounting(
+          amount,
+          dateTimeFormat.parse(showDate),
+          tagName,
+          remarks
+      ).apply { id = accountingId }
+      accountingDao.insertAccounting(accounting)
+      val newContent = createDetailContent(accounting)
+      val newAccountingList = accountingDetailList.toMutableList()
+      val oldContent = newAccountingList
+          .filter { it is MainAccountingDetailContent }
+          .map { it as MainAccountingDetailContent }
+          .find { it.id == newContent.id }
+
+      oldContent?.apply {
+        newAccountingList.indexOf(oldContent)
+            .apply {
+              findAndUpdateHeader(newAccountingList, this)
+              newAccountingList[this] = newContent
+            }
+      }
+      newAccountingList
+    }
+    .subscribeOn(Schedulers.io())
+    .execute {
+      when (it) {
+        is Loading -> {
+          copy(isLoading = true, error = null)
+        }
+        is Fail -> {
+          copy(isLoading = false, error = it.error)
+        }
+        is Success -> {
+          val list = it()!!
+          copy(
+              isLoading = false,
+              error = null,
+              accountingDetailList = list,
+              isNoData = list.isEmpty(),
+              isNoMoreData = list.size < ONE_PAGE_SIZE)
+        }
+        else -> { copy() }
+      }
+    }
+  }
+
+  fun deleteAccounting(accountingDetailList: List<MainAccountingDetail>, deletedId: Int) {
+    Observable.fromCallable {
+      accountingDao.deleteAccountingById(deletedId)
+
+      val newAccountingList = accountingDetailList.toMutableList()
+
+      val deleteContentIndex: Int = newAccountingList.indexOfLast {
+        it is MainAccountingDetailContent && it.id == deletedId
+      }
+
+      // 当天只有一条数据的时候把头部也删掉
+      var headerIndex = -1
+      if (deleteContentIndex > 0 &&
+          newAccountingList[deleteContentIndex - 1] is MainAccountingDetailHeader
+      ) {
+        headerIndex = deleteContentIndex - 1
+      }
+
+      var nextHeaderIndex = -1
+      if (deleteContentIndex + 1 <= newAccountingList.size - 1 &&
+          newAccountingList[deleteContentIndex + 1] is MainAccountingDetailHeader
+      ) {
+        nextHeaderIndex = deleteContentIndex + 1
+      }
+
+      if (((nextHeaderIndex == -1 && deleteContentIndex == newAccountingList.size - 1) &&
+              headerIndex != -1) ||
+          (headerIndex != -1 && nextHeaderIndex != -1)
+      ) {
+        newAccountingList.removeAt(deleteContentIndex)
+        newAccountingList.removeAt(headerIndex)
+      } else {
+        findAndUpdateHeader(newAccountingList, deleteContentIndex)
+        newAccountingList.removeAt(deleteContentIndex)
+      }
+
+      newAccountingList
+    }
+    .subscribeOn(Schedulers.io())
+    .execute {
+      when (it) {
+        is Loading -> {
+          copy(error = null, isLoading = true)
+        }
+        is Success -> {
+          val list = it()!!
+          copy(
+              error = null,
+              isLoading = false,
+              accountingDetailList = list,
+              isNoData = list.isEmpty(),
+              isNoMoreData = list.size < ONE_PAGE_SIZE)
+        }
+        is Fail -> {
+          copy(error = it.error, isLoading = false)
+        }
+        else -> { copy() }
+      }
+    }
+  }
+
+  private fun findAndUpdateHeader(
+    list: MutableList<MainAccountingDetail>,
+    addOrUpdateIndex: Int
+  ) {
+    list.indexOfLast { it is MainAccountingDetailHeader && list.indexOf(it) < addOrUpdateIndex }
+        .apply {
+          val createTime = (list[addOrUpdateIndex] as MainAccountingDetailContent).createTime
+          val sum = accountingDao.sumOfDay(createTime.toHms0().time / 1000)
+          val sumString: String = applicationContext.getString(
+              R.string.main_accounting_detail_header_sum, sum
+          )
+          list[this] = (list[this] as MainAccountingDetailHeader).copy(total = sumString)
+        }
+  }
+
+  companion object : MvRxViewModelFactory<MainState> {
+
+    const val ONE_PAGE_SIZE = 15
+
+    @SuppressLint("SimpleDateFormat")
+    private val dateNumFormat: SimpleDateFormat = SimpleDateFormat("yyyyMMdd")
+
+    @VisibleForTesting
+    @SuppressLint("SimpleDateFormat")
+    val oneDayFormat: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd")
+
+    @VisibleForTesting
+    @SuppressLint("SimpleDateFormat")
+    val timeFormat: SimpleDateFormat = SimpleDateFormat("HH:mm")
+
+    @VisibleForTesting
+    @SuppressLint("SimpleDateFormat")
+    val dateTimeFormat = SimpleDateFormat("yyyy/MM/dd HH:mm")
+
+    @JvmStatic override fun create(
+      activity: FragmentActivity,
+      state: MainState
+    ): BaseMvRxViewModel<MainState> {
+      return (activity as MainActivity).mainViewModelFactory
+          .create(state, RealMvRxStateStore(state))
     }
   }
 }

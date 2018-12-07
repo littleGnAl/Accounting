@@ -1,127 +1,235 @@
-/*
- * Copyright (C) 2017 littlegnal
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.littlegnal.accounting.ui.summary
 
-import com.littlegnal.accounting.base.mvi.BaseViewModel
-import com.littlegnal.accounting.base.mvi.LceStatus
-import com.littlegnal.accounting.base.mvi.MviAction
-import com.littlegnal.accounting.base.mvi.MviIntent
-import com.littlegnal.accounting.base.mvi.MviViewModel
+import android.annotation.SuppressLint
+import android.content.Context
+import androidx.annotation.VisibleForTesting
+import androidx.fragment.app.FragmentActivity
+import com.airbnb.mvrx.BaseMvRxViewModel
+import com.airbnb.mvrx.Fail
+import com.airbnb.mvrx.Loading
+import com.airbnb.mvrx.MvRxStateStore
+import com.airbnb.mvrx.MvRxViewModelFactory
+import com.airbnb.mvrx.RealMvRxStateStore
+import com.airbnb.mvrx.Success
+import com.littlegnal.accounting.R
+import com.littlegnal.accounting.base.MvRxViewModel
+import com.littlegnal.accounting.db.AccountingDao
+import com.littlegnal.accounting.db.TagAndTotal
+import com.littlegnal.accounting.ui.main.MainActivity
+import com.littlegnal.accounting.ui.summary.adapter.SummaryListItem
+import com.squareup.inject.assisted.Assisted
+import com.squareup.inject.assisted.AssistedInject
 import io.reactivex.Observable
-import io.reactivex.ObservableTransformer
 import io.reactivex.functions.BiFunction
-import io.reactivex.subjects.PublishSubject
-import javax.inject.Inject
+import io.reactivex.schedulers.Schedulers
+import java.text.SimpleDateFormat
+import java.util.Calendar
+import java.util.Date
+import java.util.Locale
 
-/**
- * 汇总页面[MviViewModel]
- */
-class SummaryViewModel @Inject constructor(
-  private val summaryActionProcessorHolder: SummaryActionProcessorHolder
-) : BaseViewModel<SummaryIntent, SummaryViewState>() {
+class SummaryViewModel @AssistedInject constructor(
+  @Assisted initialState: SummaryMvRxViewState,
+  @Assisted stateStore: MvRxStateStore<SummaryMvRxViewState>,
+  private val accountingDao: AccountingDao,
+  private val applicationContext: Context
+) : MvRxViewModel<SummaryMvRxViewState>(initialState, stateStore) {
 
-  override fun compose(intentsSubject: PublishSubject<SummaryIntent>):
-      Observable<SummaryViewState> =
-    intentsSubject
-        .compose(intentFilter)
-        .map(this::actionFromIntent)
-        .compose(summaryActionProcessorHolder.actionProcessor)
-        .scan(SummaryViewState.idle(), reducer)
-        .replay(1)
-        .autoConnect(0)
+  @AssistedInject.Factory
+  interface Factory {
+    fun create(
+      initialState: SummaryMvRxViewState,
+      stateStore: MvRxStateStore<SummaryMvRxViewState>
+    ): SummaryViewModel
+  }
 
-  /**
-   * 只取一次初始化[MviIntent]和其他[MviIntent]，过滤掉配置改变（如屏幕旋转）后重新传递过来的初始化
-   * [MviIntent]，导致重新加载数据
-   */
-  private val intentFilter: ObservableTransformer<SummaryIntent, SummaryIntent> =
-    ObservableTransformer { intents ->
-      intents.publish { shared ->
-        Observable.merge(
-            shared.ofType(SummaryIntent.InitialIntent::class.java).take(1),
-            shared.filter { it !is SummaryIntent.InitialIntent }
-        )
-      }
-    }
+  @VisibleForTesting
+  @SuppressLint("SimpleDateFormat")
+  val yearMonthFormat: SimpleDateFormat = SimpleDateFormat("yyyy-MM")
 
-  /**
-   * 把[MviIntent]转换为[MviAction]
-   */
-  private fun actionFromIntent(summaryIntent: SummaryIntent): SummaryAction =
-    when (summaryIntent) {
-      is SummaryIntent.InitialIntent -> {
-        SummaryAction.InitialAction()
-      }
-      is SummaryIntent.SwitchMonthIntent -> {
-        SummaryAction.SwitchMonthAction(summaryIntent.date)
-      }
-    }
+  @VisibleForTesting
+  val monthFormat: SimpleDateFormat = SimpleDateFormat("MMM", Locale.getDefault())
 
-  private val reducer =
-    BiFunction<SummaryViewState, SummaryResult, SummaryViewState> { previousState, result ->
-      when (result) {
-        is SummaryResult.InitialResult -> {
-          when (result.status) {
-            LceStatus.SUCCESS -> {
-              previousState.copy(
+  fun loadSummary() {
+    Observable.zip(
+        getSummaryChartData(),
+        getSummaryItemList(),
+        BiFunction { summaryChartData: SummaryChartData, list: List<SummaryListItem> ->
+          summaryChartData to list
+        })
+        .execute {
+          when (it) {
+            is Fail -> {
+              copy(isLoading = false, error = it.error)
+            }
+            is Success -> {
+              val pair = it()!!
+              copy(
                   isLoading = false,
-                  error = null,
-                  points = result.points,
-                  months = result.months,
-                  values = result.values,
-                  selectedIndex = result.selectedIndex,
-                  summaryItemList = result.summaryItemList,
-                  isSwitchMonth = false
-              )
+                  summaryChartData = pair.first,
+                  summaryItemList = pair.second)
             }
-            LceStatus.FAILURE -> {
-              previousState.copy(isLoading = false, error = result.error)
+            is Loading -> {
+              copy(isLoading = true)
             }
-            LceStatus.IN_FLIGHT -> {
-              previousState.copy(isLoading = true, error = null)
+            else -> {
+              copy()
             }
           }
         }
-        is SummaryResult.SwitchMonthResult -> {
-          when (result.status) {
-            LceStatus.SUCCESS -> {
-              previousState.copy(
-                  isLoading = false,
-                  error = null,
-                  summaryItemList = result.summaryItemList,
-                  isSwitchMonth = true
-              )
+  }
+
+  private fun getSummaryChartData() =
+      accountingDao.getMonthTotalAmount(6)
+          .toObservable()
+          .map { list ->
+            val months: MutableList<Pair<String, Date>> = mutableListOf()
+            val points: MutableList<Pair<Int, Float>> = mutableListOf()
+            val values: MutableList<String> = mutableListOf()
+
+            val today = Calendar.getInstance()
+                .apply {
+                  set(Calendar.DAY_OF_MONTH, 1)
+                  set(Calendar.HOUR, 0)
+                  set(Calendar.MINUTE, 0)
+                  set(Calendar.SECOND, 0)
+                  set(Calendar.MILLISECOND, 0)
+                  add(Calendar.MONTH, -5)
+                }
+            val firstMonthCalendar = Calendar.getInstance()
+                .apply { time = today.time }
+            repeat(6) {
+              val tempCalendar = Calendar.getInstance()
+                  .apply { time = today.time }
+              val monthString = monthFormat.format(tempCalendar.time)
+              months.add(Pair(monthString, tempCalendar.time))
+              today.add(Calendar.MONTH, 1)
             }
-            LceStatus.FAILURE -> {
-              previousState.copy(
-                  isLoading = false,
-                  error = result.error,
-                  isSwitchMonth = true
-              )
+
+//          var summaryItemList: List<SummaryListItem> = listOf()
+            var selectedIndex = -1
+
+            if (list.isNotEmpty()) {
+              val reverseTotalList = list.reversed()
+              val latestMonthCalendar = reverseTotalList.last()
+                  .let {
+                    Calendar.getInstance()
+                        .apply {
+                          time = yearMonthFormat.parse(it.yearAndMonth)
+                        }
+                  }
+
+              for (monthTotal in reverseTotalList) {
+                val monthTotalCalendar = Calendar.getInstance()
+                    .apply {
+                      time = yearMonthFormat.parse(monthTotal.yearAndMonth)
+                    }
+                if ((monthTotalCalendar.get(Calendar.YEAR) ==
+                        firstMonthCalendar.get(Calendar.YEAR) &&
+                        monthTotalCalendar.get(Calendar.MONTH) >=
+                        firstMonthCalendar.get(Calendar.MONTH)) ||
+                    monthTotalCalendar.get(Calendar.YEAR) >
+                    firstMonthCalendar.get(Calendar.YEAR)
+                ) {
+                  val index = calcMonthOffset(monthTotalCalendar, firstMonthCalendar)
+                  points.add(Pair(index, monthTotal.total))
+                  val total: Float = monthTotal.total
+                  values.add(
+                      applicationContext.getString(
+                          R.string.amount_format,
+                          total
+                      )
+                  )
+                }
+              }
+
+              selectedIndex = calcMonthOffset(latestMonthCalendar, firstMonthCalendar)
             }
-            LceStatus.IN_FLIGHT -> {
-              previousState.copy(
-                  isLoading = true,
-                  error = null,
-                  isSwitchMonth = true
-              )
-            }
+
+            SummaryChartData(
+                points = points,
+                months = months,
+                values = values,
+                selectedIndex = selectedIndex)
           }
+          .subscribeOn(Schedulers.io())
+
+  private fun getSummaryItemList() =
+      accountingDao.getLastGroupingMonthTotalAmountObservable()
+        .toObservable()
+        .map {
+          createSummaryListItems(it)
+        }
+        .subscribeOn(Schedulers.io())
+
+  // TODO: make extensions function
+  @VisibleForTesting
+  fun ensureNum2Length(num: Int): String =
+      if (num < 10) {
+        "0$num"
+      } else {
+        num.toString()
+      }
+
+  // TODO: make extensions function
+  private fun calcMonthOffset(
+    calendar1: Calendar,
+    calendar2: Calendar
+  ): Int {
+    val month1 = calendar1.get(Calendar.YEAR) * 12 + calendar1.get(Calendar.MONTH)
+    val month2 = calendar2.get(Calendar.YEAR) * 12 + calendar2.get(Calendar.MONTH)
+    return Math.abs(month1 - month2)
+  }
+
+  private fun createSummaryListItems(list: List<TagAndTotal>): List<SummaryListItem> {
+    val summaryItemList: MutableList<SummaryListItem> = mutableListOf()
+    return list.mapTo(summaryItemList) {
+      val total: Float = it.total
+      SummaryListItem(
+          it.tagName,
+          applicationContext.getString(R.string.amount_format, total)
+      )
+    }
+  }
+
+  fun switchMonth(date: Date) {
+    val selectedCalendar = Calendar.getInstance()
+        .apply { time = date }
+    val year: Int = selectedCalendar.get(Calendar.YEAR)
+    val month: Int = selectedCalendar.get(Calendar.MONTH) + 1
+    accountingDao.getGroupingMonthTotalAmountObservable(
+        year.toString(),
+        ensureNum2Length(month)
+    )
+    .map {
+      createSummaryListItems(it)
+    }
+    .toObservable()
+    .subscribeOn(Schedulers.io())
+    .execute {
+      when (it) {
+        is Loading -> {
+          copy(isLoading = true, error = null)
+        }
+        is Fail -> {
+          copy(isLoading = false, error = it.error)
+        }
+        is Success -> {
+          copy(isLoading = false, error = null, summaryItemList = it()!!)
+        }
+        else -> {
+          copy()
         }
       }
     }
+  }
+
+  companion object : MvRxViewModelFactory<SummaryMvRxViewState> {
+    @JvmStatic override fun create(
+      activity: FragmentActivity,
+      state: SummaryMvRxViewState
+    ): BaseMvRxViewModel<SummaryMvRxViewState> {
+      return (activity as MainActivity).summaryViewModelFactory
+          .create(state, RealMvRxStateStore(state))
+    }
+  }
 }

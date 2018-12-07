@@ -31,7 +31,7 @@ abstract class MainAccountingDetailHeaderModel :
   @EpoxyAttribute var title: String? = null
   @EpoxyAttribute var total: String? = null
 
-  override fun bind(holder: HeaderHolder?) {
+  override fun bind(holder: HeaderHolder) {
     super.bind(holder)
 
     holder?.header?.text = title
@@ -43,7 +43,7 @@ abstract class MainAccountingDetailHeaderModel :
     lateinit var header: AppCompatTextView
     lateinit var total: AppCompatTextView
 
-    override fun bindView(itemView: View?) {
+    override fun bindView(itemView: View) {
       itemView?.let {
         header = itemView.findViewById(R.id.main_accounting_detail_header_title)
         total = itemView.findViewById(R.id.main_accounting_detail_header_total)

@@ -16,21 +16,12 @@
 
 package com.littlegnal.accounting.ui.main
 
-import androidx.lifecycle.ViewModel
-import com.littlegnal.accounting.di.ViewModelKey
-import dagger.Binds
 import dagger.Module
 import dagger.android.ContributesAndroidInjector
-import dagger.multibindings.IntoMap
 
-@Module(includes = [MainModule::class])
+@Module
 abstract class MainBuilderModule {
 
   @ContributesAndroidInjector
-  abstract fun contributeMainActivity(): MainActivity
-
-  @Binds
-  @IntoMap
-  @ViewModelKey(MainViewModel::class)
-  abstract fun bindMainViewModel(mainViewModel: MainViewModel): ViewModel
+  abstract fun contributeNewMainActivity(): MainActivity
 }

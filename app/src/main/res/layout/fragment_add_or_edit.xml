@@ -7,8 +7,6 @@
     android:layout_height="match_parent"
     android:orientation="vertical"
     >
-  <include
-      layout="@layout/base_app_bar_layout"/>
   <ScrollView
       android:id="@+id/sv_add_or_edit"
       android:layout_width="match_parent"

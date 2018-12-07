@@ -1,45 +1,38 @@
-/*
- * Copyright (C) 2017 littlegnal
- *
- * Licensed under the Apache License, Version 2.0 (the "License");
- * you may not use this file except in compliance with the License.
- * You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
- * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS,
- * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
- * See the License for the specific language governing permissions and
- * limitations under the License.
- */
-
 package com.littlegnal.accounting.ui.main
 
 import android.content.Context
+import androidx.lifecycle.Lifecycle
 import com.littlegnal.accounting.R
-import com.littlegnal.accounting.base.eventbus.RxBus
-import com.littlegnal.accounting.base.schedulers.TestSchedulerProvider
+import com.littlegnal.accounting.R.string
+import com.littlegnal.accounting.base.RxImmediateSchedulerRule
+import com.littlegnal.accounting.base.TestLifecycleOwner
+import com.littlegnal.accounting.base.TestMvRxStateStore
 import com.littlegnal.accounting.db.Accounting
 import com.littlegnal.accounting.db.AccountingDao
+import com.littlegnal.accounting.ui.main.MainViewModel.Companion.ONE_PAGE_SIZE
+import com.littlegnal.accounting.ui.main.MainViewModel.Companion.dateTimeFormat
+import com.littlegnal.accounting.ui.main.MainViewModel.Companion.oneDayFormat
+import com.littlegnal.accounting.ui.main.MainViewModel.Companion.timeFormat
 import com.littlegnal.accounting.ui.main.adapter.MainAccountingDetail
 import com.littlegnal.accounting.ui.main.adapter.MainAccountingDetailContent
 import com.littlegnal.accounting.ui.main.adapter.MainAccountingDetailHeader
 import io.reactivex.Maybe
-import io.reactivex.Observable
-import io.reactivex.observers.TestObserver
 import org.junit.Before
+import org.junit.Rule
 import org.junit.Test
 import org.mockito.ArgumentMatchers
 import org.mockito.Mock
+import org.mockito.Mockito
 import org.mockito.Mockito.`when`
-import org.mockito.Mockito.times
-import org.mockito.Mockito.verify
+import org.mockito.Mockito.anyLong
 import org.mockito.MockitoAnnotations
-import java.text.SimpleDateFormat
 import java.util.Calendar
 
 class MainViewModelTest {
+
+  @Rule
+  @JvmField
+  val scheduler = RxImmediateSchedulerRule()
 
   @Mock
   private lateinit var applicationContext: Context
@@ -47,15 +40,15 @@ class MainViewModelTest {
   @Mock
   private lateinit var accountingDao: AccountingDao
 
-  private val rxBus = RxBus()
-
   private lateinit var mainViewModel: MainViewModel
-
-  private lateinit var testObserver: TestObserver<MainViewState>
 
   private lateinit var accountings: List<Accounting>
 
   private lateinit var adapterList: List<MainAccountingDetail>
+
+  private lateinit var owner: TestLifecycleOwner
+
+  private lateinit var testStateStore: TestMvRxStateStore<MainState>
 
   private val calendar: Calendar = Calendar.getInstance()
       .apply {
@@ -63,16 +56,21 @@ class MainViewModelTest {
         set(Calendar.MILLISECOND, 0)
       }
 
+  private fun initViewModel(initialState: MainState) {
+    testStateStore = TestMvRxStateStore.create(initialState)
+    mainViewModel = MainViewModel(
+        initialState,
+        testStateStore,
+        accountingDao,
+        applicationContext)
+  }
+
   @Before
   fun setUp() {
     MockitoAnnotations.initMocks(this)
 
-    mainViewModel = MainViewModel(
-        MainActionProcessorHolder(TestSchedulerProvider(), applicationContext, accountingDao),
-        rxBus
-    )
-    testObserver = mainViewModel.states()
-        .test()
+    owner = TestLifecycleOwner()
+    owner.lifecycle.markState(Lifecycle.State.STARTED)
 
     val tempAccountings = mutableListOf<Accounting>()
     val tempAdapterList = mutableListOf<MainAccountingDetail>()
@@ -92,7 +90,7 @@ class MainViewModelTest {
 
       tempAdapterList.add(
           MainAccountingDetailHeader(
-              ONE_DAY_FORMAT.format(accountingCalendar.time),
+              oneDayFormat.format(accountingCalendar.time),
               "共(¥100.00)"
           )
       )
@@ -102,7 +100,7 @@ class MainViewModelTest {
               "¥100.00",
               accounting.tagName,
               accounting.remarks,
-              TIME_FORMAT.format(accounting.createTime),
+              timeFormat.format(accounting.createTime),
               accounting.createTime
           )
       )
@@ -114,72 +112,68 @@ class MainViewModelTest {
   }
 
   @Test
-  fun test_initialIntent_firstPage() {
+  fun loadList_firstPage_success() {
     val firstPage = accountings.take(ONE_PAGE_SIZE)
     val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE)
 
-    val loadingState = MainViewState(
-        isLoading = true,
-        error = null,
-        accountingDetailList = listOf(),
-        isNoData = false,
-        isNoMoreData = false
-    )
+    val loadingState = MainState(isLoading = true, lastDate = calendar.time)
     val firstPageState = loadingState.copy(
         isLoading = false,
         accountingDetailList = firstPageAdapterList
     )
 
-    `when`(accountingDao.queryPreviousAccounting(mainViewModel.now.time, ONE_PAGE_SIZE.toLong()))
+    `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
         .thenReturn(Maybe.just(firstPage))
-    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyString())).thenReturn(100.0f)
-    `when`(applicationContext.getString(R.string.amount_format, 100.0f))
+    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyLong()))
+        .thenReturn(100.0f)
+    `when`(applicationContext.getString(string.amount_format, 100.0f))
         .thenReturn("¥100.00")
-    `when`(
-        applicationContext.getString(
-            R.string.main_accounting_detail_header_sum,
-            100.0f
-        )
-    )
+    `when`(applicationContext.getString(string.main_accounting_detail_header_sum, 100.0f))
         .thenReturn("共(¥100.00)")
 
-    mainViewModel.processIntents(Observable.just(MainIntent.InitialIntent()))
+    val initialState = MainState(lastDate = calendar.time)
+    initViewModel(initialState)
 
-    testObserver.assertValueAt(1, loadingState)
-    testObserver.assertValueAt(2, firstPageState)
+    testStateStore.testAllStates { stateList ->
+      stateList.size == 3 && stateList[1] == loadingState && stateList[2] == firstPageState
+    }
   }
 
   @Test
-  fun test_initialIntent_firstPage_whenNoDatas() {
-    val loadingState = MainViewState(
+  fun loadList_firstPage_whenNoDatas() {
+    val loadingState = MainState(
         isLoading = true,
         error = null,
         accountingDetailList = listOf(),
         isNoMoreData = false,
-        isNoData = false
+        isNoData = false,
+        lastDate = calendar.time
     )
     val firstPageState = loadingState.copy(isLoading = false, isNoMoreData = true, isNoData = true)
 
-    `when`(accountingDao.queryPreviousAccounting(mainViewModel.now.time, ONE_PAGE_SIZE.toLong()))
+    `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
         .thenReturn(Maybe.just(listOf()))
 
-    mainViewModel.processIntents(Observable.just(MainIntent.InitialIntent()))
+    val initialState = MainState(lastDate = calendar.time)
+    initViewModel(initialState)
 
-    testObserver.assertValueAt(1, loadingState)
-    testObserver.assertValueAt(2, firstPageState)
+    testStateStore.testAllStates { stateList ->
+      stateList.size == 3 && stateList[1] == loadingState && stateList[2] == firstPageState
+    }
   }
 
   @Test
-  fun test_initialIntent_firstPage_whenNoMoreData() {
+  fun loadList_firstPage_whenNoMoreData() {
     val firstPage = accountings.take(ONE_PAGE_SIZE - 1)
     val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE - 2)
 
-    val loadingState = MainViewState(
+    val loadingState = MainState(
         isLoading = true,
         error = null,
         accountingDetailList = listOf(),
         isNoData = false,
-        isNoMoreData = false
+        isNoMoreData = false,
+        lastDate = calendar.time
     )
     val firstPageState = loadingState.copy(
         isLoading = false,
@@ -187,166 +181,51 @@ class MainViewModelTest {
         isNoMoreData = true
     )
 
-    `when`(accountingDao.queryPreviousAccounting(mainViewModel.now.time, ONE_PAGE_SIZE.toLong()))
+    `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
         .thenReturn(Maybe.just(firstPage))
-    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyString())).thenReturn(100.0f)
+    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyLong())).thenReturn(100.0f)
     `when`(applicationContext.getString(R.string.amount_format, 100.0f))
         .thenReturn("¥100.00")
-    `when`(
-        applicationContext.getString(
+    `when`(applicationContext.getString(
             R.string.main_accounting_detail_header_sum,
-            100.0f
-        )
-    )
+            100.0f))
         .thenReturn("共(¥100.00)")
 
-    mainViewModel.processIntents(Observable.just(MainIntent.InitialIntent()))
+    val initialState = MainState(lastDate = calendar.time)
+    initViewModel(initialState)
 
-    testObserver.assertValueAt(1, loadingState)
-    testObserver.assertValueAt(2, firstPageState)
+    testStateStore.testAllStates { stateList ->
+      stateList.size == 3 && stateList[1] == loadingState && stateList[2] == firstPageState
+    }
   }
 
   @Test
-  fun test_loadNextPageIntent() {
+  fun addOrEditAccounting_addAccounting() {
     val firstPage = accountings.take(ONE_PAGE_SIZE)
     val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE)
-    val secondPage = accountings.subList(ONE_PAGE_SIZE, 2 * ONE_PAGE_SIZE)
-    val secondPageAdapterList = adapterList.subList(2 * ONE_PAGE_SIZE, 4 * ONE_PAGE_SIZE)
-
-    val loadingState = MainViewState(
-        isLoading = true,
-        error = null,
-        accountingDetailList = listOf(),
-        isNoData = false,
-        isNoMoreData = false
-    )
-    val firstPageState = loadingState.copy(
-        isLoading = false,
-        accountingDetailList = firstPageAdapterList
-    )
-    val secondPageLoadingState = firstPageState.copy(isLoading = true)
-    val secondPageState = secondPageLoadingState.copy(
-        isLoading = false,
-        accountingDetailList = firstPageAdapterList.let {
-          it.toMutableList()
-              .apply { addAll(secondPageAdapterList) }
-        })
-
-    `when`(accountingDao.queryPreviousAccounting(mainViewModel.now.time, ONE_PAGE_SIZE.toLong()))
-        .thenReturn(Maybe.just(firstPage))
-    `when`(
-        accountingDao.queryPreviousAccounting(
-            firstPage.last().createTime,
-            ONE_PAGE_SIZE.toLong()
-        )
-    )
-        .thenReturn(Maybe.just(secondPage))
-    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyString())).thenReturn(100.0f)
-    `when`(applicationContext.getString(R.string.amount_format, 100.0f))
-        .thenReturn("¥100.00")
-    `when`(
-        applicationContext.getString(
-            R.string.main_accounting_detail_header_sum,
-            100.0f
-        )
-    )
-        .thenReturn("共(¥100.00)")
-
-    val intents = Observable.merge(
-        Observable.just(MainIntent.InitialIntent()),
-        Observable.just(MainIntent.LoadNextPageIntent(firstPage.last().createTime))
-    )
-
-    mainViewModel.processIntents(intents)
-
-    testObserver.assertValueAt(3, secondPageLoadingState)
-    testObserver.assertValueAt(4, secondPageState)
-  }
-
-  @Test
-  fun test_loadNextPageIntent_whenNoMoreData() {
-    val firstPage = accountings.take(ONE_PAGE_SIZE)
-    val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE)
-    val secondPage = accountings.subList(ONE_PAGE_SIZE, 2 * ONE_PAGE_SIZE - 1)
-    val secondPageAdapterList = adapterList.subList(2 * ONE_PAGE_SIZE, 4 * ONE_PAGE_SIZE - 2)
-
-    val loadingState = MainViewState(
-        isLoading = true,
-        error = null,
-        accountingDetailList = listOf(),
-        isNoData = false,
-        isNoMoreData = false
-    )
-    val firstPageState = loadingState.copy(
-        isLoading = false,
-        accountingDetailList = firstPageAdapterList
-    )
-    val secondPageLoadingState = firstPageState.copy(isLoading = true)
-    val secondPageState = secondPageLoadingState.copy(
-        isLoading = false,
-        accountingDetailList = firstPageAdapterList.let {
-          it.toMutableList()
-              .apply { addAll(secondPageAdapterList) }
-        },
-        isNoMoreData = true
-    )
-
-    `when`(accountingDao.queryPreviousAccounting(mainViewModel.now.time, ONE_PAGE_SIZE.toLong()))
-        .thenReturn(Maybe.just(firstPage))
-    `when`(
-        accountingDao.queryPreviousAccounting(
-            firstPage.last().createTime,
-            ONE_PAGE_SIZE.toLong()
-        )
-    )
-        .thenReturn(Maybe.just(secondPage))
-    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyString())).thenReturn(100.0f)
-    `when`(applicationContext.getString(R.string.amount_format, 100.0f))
-        .thenReturn("¥100.00")
-    `when`(
-        applicationContext.getString(
-            R.string.main_accounting_detail_header_sum,
-            100.0f
-        )
-    )
-        .thenReturn("共(¥100.00)")
-
-    val intents = Observable.merge(
-        Observable.just(MainIntent.InitialIntent()),
-        Observable.just(MainIntent.LoadNextPageIntent(firstPage.last().createTime))
-    )
-
-    mainViewModel.processIntents(intents)
-
-    testObserver.assertValueAt(3, secondPageLoadingState)
-    testObserver.assertValueAt(4, secondPageState)
-  }
-
-  @Test
-  fun test_addOrEditAccountingIntent_addAccounting() {
-    val firstPage = accountings.take(ONE_PAGE_SIZE)
-    val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE)
-    val addedAccounting = Accounting(
+    val insertAccounting = Accounting(
         100.0f,
         calendar.time,
         "早餐",
         "gg"
-    ).apply { id = 3 * ONE_PAGE_SIZE + 1 }
+    )
+    val addedAccounting = insertAccounting.copy().apply { id = 3 * ONE_PAGE_SIZE + 1 }
     val addedContent = MainAccountingDetailContent(
         addedAccounting.id,
         "¥100.00",
         addedAccounting.tagName,
         addedAccounting.remarks,
-        TIME_FORMAT.format(addedAccounting.createTime),
+        timeFormat.format(addedAccounting.createTime),
         addedAccounting.createTime
     )
 
-    val loadingState = MainViewState(
+    val loadingState = MainState(
         isLoading = true,
         error = null,
         accountingDetailList = listOf(),
         isNoData = false,
-        isNoMoreData = false
+        isNoMoreData = false,
+        lastDate = calendar.time
     )
     val firstPageState = loadingState.copy(
         isLoading = false,
@@ -360,42 +239,42 @@ class MainViewModelTest {
               .apply { add(1, addedContent) }
         })
 
-    `when`(accountingDao.queryPreviousAccounting(mainViewModel.now.time, ONE_PAGE_SIZE.toLong()))
+    `when`(accountingDao.insertAccounting(insertAccounting)).thenReturn(addedAccounting.id.toLong())
+    `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
         .thenReturn(Maybe.just(firstPage))
-    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyString())).thenReturn(100.0f)
+    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyLong())).thenReturn(100.0f)
     `when`(applicationContext.getString(R.string.amount_format, 100.0f))
         .thenReturn("¥100.00")
-    `when`(
-        applicationContext.getString(
-            R.string.main_accounting_detail_header_sum,
-            100.0f
-        )
-    )
-        .thenReturn("共(¥100.00)")
+    `when`(applicationContext.getString(R.string.main_accounting_detail_header_sum, 100.0f))
+    .thenReturn("共(¥100.00)")
 
-    val intents = Observable.merge(
-        Observable.just(MainIntent.InitialIntent()),
-        Observable.just(
-            MainIntent.AddOrEditAccountingIntent(
-                true, addedAccounting
-            )
-        )
-    )
-    mainViewModel.processIntents(intents)
+    val initialState = MainState(lastDate = calendar.time)
+    initViewModel(initialState)
 
-    testObserver.assertValueAt(3, addedState)
+    mainViewModel.addOrEditAccounting(
+        accountingDetailList = firstPageAdapterList,
+        accountingId = -1,
+        amount = addedAccounting.amount,
+        tagName = addedAccounting.tagName,
+        showDate = dateTimeFormat.format(addedAccounting.createTime),
+        remarks = addedAccounting.remarks)
+
+    testStateStore.testAllStates { stateList ->
+      stateList.size == 5 && stateList[4] == addedState
+    }
   }
 
   @Test
-  fun test_addOrEditAccountingIntent_addAccounting_whenNoDatas() {
-    val addedAccounting = Accounting(
+  fun addOrEditAccounting_addAccounting_whenNoDatas() {
+    val insertAccounting = Accounting(
         100.0f,
         calendar.time,
         "早餐",
         "gg"
-    ).apply { id = 3 * ONE_PAGE_SIZE + 1 }
+    )
+    val addedAccounting = insertAccounting.copy().apply { id = 3 * ONE_PAGE_SIZE + 1 }
     val addedHeader = MainAccountingDetailHeader(
-        ONE_DAY_FORMAT.format(addedAccounting.createTime),
+        oneDayFormat.format(addedAccounting.createTime),
         "共(¥100.00)"
     )
     val addedContent = MainAccountingDetailContent(
@@ -403,21 +282,23 @@ class MainViewModelTest {
         "¥100.00",
         addedAccounting.tagName,
         addedAccounting.remarks,
-        TIME_FORMAT.format(addedAccounting.createTime),
+        timeFormat.format(addedAccounting.createTime),
         addedAccounting.createTime
     )
 
-    val addedState = MainViewState(
+    val addedState = MainState(
         isLoading = false,
         error = null,
         accountingDetailList = listOf(addedHeader, addedContent),
         isNoMoreData = true,
-        isNoData = false
+        isNoData = false,
+        lastDate = calendar.time
     )
 
-    `when`(accountingDao.queryPreviousAccounting(mainViewModel.now.time, ONE_PAGE_SIZE.toLong()))
+    `when`(accountingDao.insertAccounting(insertAccounting)).thenReturn(addedAccounting.id.toLong())
+    `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
         .thenReturn(Maybe.just(listOf()))
-    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyString())).thenReturn(100.0f)
+    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyLong())).thenReturn(100.0f)
     `when`(applicationContext.getString(R.string.amount_format, 100.0f))
         .thenReturn("¥100.00")
     `when`(
@@ -426,23 +307,26 @@ class MainViewModelTest {
             100.0f
         )
     )
-        .thenReturn("共(¥100.00)")
+    .thenReturn("共(¥100.00)")
 
-    val intents = Observable.merge(
-        Observable.just(MainIntent.InitialIntent()),
-        Observable.just(
-            MainIntent.AddOrEditAccountingIntent(
-                true, addedAccounting
-            )
-        )
-    )
-    mainViewModel.processIntents(intents)
+    val initialState = MainState(lastDate = calendar.time)
+    initViewModel(initialState)
 
-    testObserver.assertValueAt(3, addedState)
+    mainViewModel.addOrEditAccounting(
+        accountingDetailList = emptyList(),
+        accountingId = -1,
+        amount = addedAccounting.amount,
+        tagName = addedAccounting.tagName,
+        showDate = dateTimeFormat.format(addedAccounting.createTime),
+        remarks = addedAccounting.remarks)
+
+    testStateStore.testAllStates { stateList ->
+      stateList.size == 5 && stateList[4] == addedState
+    }
   }
 
   @Test
-  fun test_addOrEditAccountingIntent_updateAccounting() {
+  fun addOrEditAccounting_updateAccounting() {
     val firstPage = accountings.take(ONE_PAGE_SIZE)
     val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE)
     val updatedAccounting = firstPage[0].apply { this.tagName = "123" }
@@ -451,11 +335,11 @@ class MainViewModelTest {
         "¥100.00",
         updatedAccounting.tagName,
         updatedAccounting.remarks,
-        TIME_FORMAT.format(updatedAccounting.createTime),
+        timeFormat.format(updatedAccounting.createTime),
         updatedAccounting.createTime
     )
 
-    val updatedState = MainViewState(
+    val updatedState = MainState(
         isLoading = false,
         error = null,
         accountingDetailList = firstPageAdapterList.let {
@@ -463,12 +347,15 @@ class MainViewModelTest {
               .apply { set(1, updatedAdapterItem) }
         },
         isNoData = false,
-        isNoMoreData = false
+        isNoMoreData = false,
+        lastDate = calendar.time
     )
 
-    `when`(accountingDao.queryPreviousAccounting(mainViewModel.now.time, ONE_PAGE_SIZE.toLong()))
+    `when`(accountingDao.insertAccounting(updatedAccounting))
+        .thenReturn(updatedAccounting.id.toLong())
+    `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
         .thenReturn(Maybe.just(firstPage))
-    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyString())).thenReturn(100.0f)
+    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyLong())).thenReturn(100.0f)
     `when`(applicationContext.getString(R.string.amount_format, 100.0f))
         .thenReturn("¥100.00")
     `when`(
@@ -477,40 +364,43 @@ class MainViewModelTest {
             100.0f
         )
     )
-        .thenReturn("共(¥100.00)")
+    .thenReturn("共(¥100.00)")
 
-    val intents = Observable.merge(
-        Observable.just(MainIntent.InitialIntent()),
-        Observable.just(
-            MainIntent.AddOrEditAccountingIntent(
-                false, updatedAccounting
-            )
-        )
-    )
+    val initialState = MainState(lastDate = calendar.time)
+    initViewModel(initialState)
 
-    mainViewModel.processIntents(intents)
+    mainViewModel.addOrEditAccounting(
+        accountingDetailList = firstPageAdapterList,
+        accountingId = updatedAccounting.id,
+        amount = updatedAccounting.amount,
+        tagName = updatedAccounting.tagName,
+        showDate = dateTimeFormat.format(updatedAccounting.createTime),
+        remarks = updatedAccounting.remarks)
 
-    testObserver.assertValueAt(3, updatedState)
+    testStateStore.testAllStates { stateList ->
+      stateList.size == 5 && stateList[4] == updatedState
+    }
   }
 
   @Test
-  fun test_deleteAccountingIntent() {
+  fun deleteAccounting() {
     val firstPage = accountings.take(ONE_PAGE_SIZE)
     val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE)
     val afterDeletedAdapterList = firstPageAdapterList
         .subList(2, firstPageAdapterList.size)
 
-    val deletedState = MainViewState(
+    val deletedState = MainState(
         isLoading = false,
         error = null,
         accountingDetailList = afterDeletedAdapterList,
         isNoData = false,
-        isNoMoreData = false
+        isNoMoreData = false,
+        lastDate = calendar.time
     )
 
-    `when`(accountingDao.queryPreviousAccounting(mainViewModel.now.time, ONE_PAGE_SIZE.toLong()))
+    `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
         .thenReturn(Maybe.just(firstPage))
-    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyString())).thenReturn(100.0f)
+    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyLong())).thenReturn(100.0f)
     `when`(applicationContext.getString(R.string.amount_format, 100.0f))
         .thenReturn("¥100.00")
     `when`(
@@ -519,22 +409,17 @@ class MainViewModelTest {
             100.0f
         )
     )
-        .thenReturn("共(¥100.00)")
+    .thenReturn("共(¥100.00)")
 
-    val intents = Observable.merge(
-        Observable.just(MainIntent.InitialIntent()),
-        Observable.just(MainIntent.DeleteAccountingIntent(1))
-    )
-    mainViewModel.processIntents(intents)
+    val initialState = MainState(lastDate = calendar.time)
+    initViewModel(initialState)
 
-    verify(accountingDao, times(1)).deleteAccountingById(1)
+    mainViewModel.deleteAccounting(firstPageAdapterList, 1)
 
-    testObserver.assertValueAt(4, deletedState)
-  }
+    Mockito.verify(accountingDao, Mockito.times(1)).deleteAccountingById(1)
 
-  companion object {
-    private val ONE_DAY_FORMAT: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd")
-
-    private val TIME_FORMAT: SimpleDateFormat = SimpleDateFormat("HH:mm")
+    testStateStore.testAllStates { stateList ->
+      stateList.size == 5 && stateList[4] == deletedState
+    }
   }
 }

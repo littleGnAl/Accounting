@@ -19,6 +19,7 @@ package com.littlegnal.accounting.db
 import androidx.room.Room
 import androidx.test.InstrumentationRegistry
 import androidx.test.runner.AndroidJUnit4
+import com.littlegnal.accounting.base.util.toHms0
 import org.hamcrest.MatcherAssert.assertThat
 import org.hamcrest.Matchers
 import org.junit.After
@@ -111,7 +112,7 @@ class AccountingDaoTest {
     accountingDao.insertAccounting(account2)
     accountingDao.insertAccounting(account3)
 
-    val amountSum = accountingDao.sumOfDay(ONE_DAY_FORMAT.format(todayCalendar.time))
+    val amountSum = accountingDao.sumOfDay(todayCalendar.time.toHms0().time / 1000)
     assertThat(amountSum, Matchers.`is`(300.0f))
   }
 
@@ -221,6 +222,35 @@ class AccountingDaoTest {
 
     assertThat(resultList.size, Matchers.`is`(2))
     assertThat(resultList.containsAll(listOf(tagTotal1, tagTotal2)), Matchers.`is`(true))
+  }
+
+  @Test
+  fun test_getLastGroupingMonthTotalAmountObservable() {
+    val today = Calendar.getInstance()
+    val calendar = Calendar.getInstance().apply { set(Calendar.MONTH, -1) }
+    val account1 = Accounting(
+        100.0f,
+        today.time,
+        "早餐",
+        "100块的茶叶蛋")
+    calendar.add(Calendar.HOUR_OF_DAY, -1)
+    val account2 = Accounting(
+        100.0f,
+        calendar.time,
+        "午餐",
+        "100块的鸭腿")
+    accountingDao.insertAccounting(account1)
+    accountingDao.insertAccounting(account2)
+
+    val tagTotal1 = TagAndTotal("早餐", 100.0f)
+
+    accountingDao.getLastGroupingMonthTotalAmountObservable()
+        .test()
+        .assertValue {
+          it.size == 1 &&
+              it[0].tagName == tagTotal1.tagName &&
+              it[0].total == tagTotal1.total
+        }
   }
 
   @Test
