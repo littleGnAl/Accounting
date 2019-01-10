@@ -2,11 +2,14 @@ package com.littlegnal.accounting.ui.main
 
 import android.content.Context
 import androidx.lifecycle.Lifecycle
+import com.airbnb.mvrx.Async
+import com.airbnb.mvrx.Loading
+import com.airbnb.mvrx.Success
+import com.airbnb.mvrx.withState
 import com.littlegnal.accounting.R
 import com.littlegnal.accounting.R.string
 import com.littlegnal.accounting.base.RxImmediateSchedulerRule
 import com.littlegnal.accounting.base.TestLifecycleOwner
-import com.littlegnal.accounting.base.TestMvRxStateStore
 import com.littlegnal.accounting.db.Accounting
 import com.littlegnal.accounting.db.AccountingDao
 import com.littlegnal.accounting.ui.main.MainViewModel.Companion.ONE_PAGE_SIZE
@@ -24,9 +27,9 @@ import org.mockito.ArgumentMatchers
 import org.mockito.Mock
 import org.mockito.Mockito
 import org.mockito.Mockito.`when`
-import org.mockito.Mockito.anyLong
 import org.mockito.MockitoAnnotations
 import java.util.Calendar
+import kotlin.reflect.KProperty1
 
 class MainViewModelTest {
 
@@ -48,22 +51,11 @@ class MainViewModelTest {
 
   private lateinit var owner: TestLifecycleOwner
 
-  private lateinit var testStateStore: TestMvRxStateStore<MainState>
-
   private val calendar: Calendar = Calendar.getInstance()
       .apply {
         set(Calendar.SECOND, 0)
         set(Calendar.MILLISECOND, 0)
       }
-
-  private fun initViewModel(initialState: MainState) {
-    testStateStore = TestMvRxStateStore.create(initialState)
-    mainViewModel = MainViewModel(
-        initialState,
-        testStateStore,
-        accountingDao,
-        applicationContext)
-  }
 
   @Before
   fun setUp() {
@@ -81,10 +73,10 @@ class MainViewModelTest {
       val accountingCalendar = Calendar.getInstance()
           .apply { time = tempCalendar.time }
       val accounting = Accounting(
-          100.0f,
-          accountingCalendar.time,
-          "早餐",
-          "gg"
+          amount = 100.0f,
+          createTime = accountingCalendar.time,
+          tagName = "早餐",
+          remarks = "gg"
       ).apply { id = i + 1 }
       tempAccountings.add(accounting)
 
@@ -116,12 +108,6 @@ class MainViewModelTest {
     val firstPage = accountings.take(ONE_PAGE_SIZE)
     val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE)
 
-    val loadingState = MainState(isLoading = true, lastDate = calendar.time)
-    val firstPageState = loadingState.copy(
-        isLoading = false,
-        accountingDetailList = firstPageAdapterList
-    )
-
     `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
         .thenReturn(Maybe.just(firstPage))
     `when`(accountingDao.sumOfDay(ArgumentMatchers.anyLong()))
@@ -132,33 +118,54 @@ class MainViewModelTest {
         .thenReturn("共(¥100.00)")
 
     val initialState = MainState(lastDate = calendar.time)
-    initViewModel(initialState)
+    mainViewModel = MainViewModel(
+        initialState,
+        accountingDao,
+        applicationContext)
 
-    testStateStore.testAllStates { stateList ->
-      stateList.size == 3 && stateList[1] == loadingState && stateList[2] == firstPageState
+    val data = mutableListOf<Async<List<MainAccountingDetail>>>()
+    mainViewModel.selectSubscribe(owner, MainState::accountingDetailList) {
+      data.add(it)
+    }
+    mainViewModel.loadFirstPage()
+
+    assert(data.size == 3 &&
+        data[1] is Loading &&
+        data[2] is Success &&
+        data[2]() == firstPageAdapterList)
+
+    withState(mainViewModel) {
+      assert(!it.isNoMoreData)
+      assert(!it.isNoData)
     }
   }
 
   @Test
   fun loadList_firstPage_whenNoDatas() {
-    val loadingState = MainState(
-        isLoading = true,
-        error = null,
-        accountingDetailList = listOf(),
-        isNoMoreData = false,
-        isNoData = false,
-        lastDate = calendar.time
-    )
-    val firstPageState = loadingState.copy(isLoading = false, isNoMoreData = true, isNoData = true)
-
     `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
         .thenReturn(Maybe.just(listOf()))
 
     val initialState = MainState(lastDate = calendar.time)
-    initViewModel(initialState)
+    mainViewModel = MainViewModel(
+        initialState,
+        accountingDao,
+        applicationContext)
 
-    testStateStore.testAllStates { stateList ->
-      stateList.size == 3 && stateList[1] == loadingState && stateList[2] == firstPageState
+    val data = mutableListOf<Async<List<MainAccountingDetail>>>()
+    mainViewModel.selectSubscribe(owner, MainState::accountingDetailList) {
+      data.add(it)
+    }
+
+    mainViewModel.loadFirstPage()
+
+    assert(data.size == 3 &&
+        data[1] is Loading &&
+        data[2] is Success &&
+        data[2]() == listOf<MainAccountingDetail>())
+
+    withState(mainViewModel) {
+      assert(it.isNoMoreData)
+      assert(it.isNoData)
     }
   }
 
@@ -166,20 +173,6 @@ class MainViewModelTest {
   fun loadList_firstPage_whenNoMoreData() {
     val firstPage = accountings.take(ONE_PAGE_SIZE - 1)
     val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE - 2)
-
-    val loadingState = MainState(
-        isLoading = true,
-        error = null,
-        accountingDetailList = listOf(),
-        isNoData = false,
-        isNoMoreData = false,
-        lastDate = calendar.time
-    )
-    val firstPageState = loadingState.copy(
-        isLoading = false,
-        accountingDetailList = firstPageAdapterList,
-        isNoMoreData = true
-    )
 
     `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
         .thenReturn(Maybe.just(firstPage))
@@ -192,10 +185,117 @@ class MainViewModelTest {
         .thenReturn("共(¥100.00)")
 
     val initialState = MainState(lastDate = calendar.time)
-    initViewModel(initialState)
+    mainViewModel = MainViewModel(
+        initialState,
+        accountingDao,
+        applicationContext)
 
-    testStateStore.testAllStates { stateList ->
-      stateList.size == 3 && stateList[1] == loadingState && stateList[2] == firstPageState
+    val data = mutableListOf<Async<List<MainAccountingDetail>>>()
+    mainViewModel.selectSubscribe(owner, MainState::accountingDetailList) {
+      data.add(it)
+    }
+
+    mainViewModel.loadFirstPage()
+    assert(data.size == 3 &&
+        data[1] is Loading &&
+        data[2] is Success &&
+        data[2]() == firstPageAdapterList)
+
+    withState(mainViewModel) {
+      assert(it.isNoMoreData)
+      assert(!it.isNoData)
+    }
+  }
+
+  @Test
+  fun loadNextPage_success() {
+    val firstPage = accountings.take(ONE_PAGE_SIZE)
+    val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE)
+    val secondPage = accountings.subList(ONE_PAGE_SIZE, 2 * ONE_PAGE_SIZE)
+    val secondPageAdapterList = adapterList.subList(2 * ONE_PAGE_SIZE, 4 * ONE_PAGE_SIZE)
+
+    `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
+        .thenReturn(Maybe.just(firstPage))
+    `when`(
+        accountingDao.queryPreviousAccounting(
+            firstPage.last().createTime,
+            ONE_PAGE_SIZE.toLong()
+        )
+    )
+        .thenReturn(Maybe.just(secondPage))
+    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyLong())).thenReturn(100.0f)
+    `when`(applicationContext.getString(R.string.amount_format, 100.0f))
+        .thenReturn("¥100.00")
+    `when`(applicationContext.getString(
+            R.string.main_accounting_detail_header_sum,
+            100.0f))
+        .thenReturn("共(¥100.00)")
+
+    val initialState = MainState(lastDate = calendar.time)
+    mainViewModel = MainViewModel(
+        initialState,
+        accountingDao,
+        applicationContext)
+
+    mainViewModel.loadFirstPage()
+    val values = getStateProperty(MainState::accountingDetailList)
+    mainViewModel.loadList(firstPageAdapterList, firstPage.last().createTime)
+
+    assert(
+        values.size == 3 &&
+            values[1] is Loading &&
+            values[2] is Success &&
+            values[2]() == firstPageAdapterList.let {
+          it.toMutableList().apply { addAll(secondPageAdapterList) }
+        }
+    )
+  }
+
+  @Test
+  fun loadNextPage_whenNoMoreData_success() {
+    val firstPage = accountings.take(ONE_PAGE_SIZE)
+    val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE)
+    val secondPage = accountings.subList(ONE_PAGE_SIZE, 2 * ONE_PAGE_SIZE - 1)
+    val secondPageAdapterList = adapterList.subList(2 * ONE_PAGE_SIZE, 4 * ONE_PAGE_SIZE - 2)
+
+    `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
+        .thenReturn(Maybe.just(firstPage))
+    `when`(
+        accountingDao.queryPreviousAccounting(
+            firstPage.last().createTime,
+            ONE_PAGE_SIZE.toLong()
+        )
+    )
+        .thenReturn(Maybe.just(secondPage))
+    `when`(accountingDao.sumOfDay(ArgumentMatchers.anyLong())).thenReturn(100.0f)
+    `when`(applicationContext.getString(R.string.amount_format, 100.0f))
+        .thenReturn("¥100.00")
+    `when`(applicationContext.getString(
+            R.string.main_accounting_detail_header_sum,
+            100.0f))
+        .thenReturn("共(¥100.00)")
+
+    val initialState = MainState(lastDate = calendar.time)
+    mainViewModel = MainViewModel(
+        initialState,
+        accountingDao,
+        applicationContext)
+
+    mainViewModel.loadFirstPage()
+    val values = getStateProperty(MainState::accountingDetailList)
+    mainViewModel.loadList(firstPageAdapterList, firstPage.last().createTime)
+
+    assert(
+        values.size == 3 &&
+            values[1] is Loading &&
+            values[2] is Success &&
+            values[2]() == firstPageAdapterList.let {
+              it.toMutableList().apply { addAll(secondPageAdapterList) }
+            }
+    )
+
+    withState(mainViewModel) {
+      assert(it.isNoMoreData)
     }
   }
 
@@ -204,10 +304,10 @@ class MainViewModelTest {
     val firstPage = accountings.take(ONE_PAGE_SIZE)
     val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE)
     val insertAccounting = Accounting(
-        100.0f,
-        calendar.time,
-        "早餐",
-        "gg"
+        amount = 100.0f,
+        createTime = calendar.time,
+        tagName = "早餐",
+        remarks = "gg"
     )
     val addedAccounting = insertAccounting.copy().apply { id = 3 * ONE_PAGE_SIZE + 1 }
     val addedContent = MainAccountingDetailContent(
@@ -219,26 +319,6 @@ class MainViewModelTest {
         addedAccounting.createTime
     )
 
-    val loadingState = MainState(
-        isLoading = true,
-        error = null,
-        accountingDetailList = listOf(),
-        isNoData = false,
-        isNoMoreData = false,
-        lastDate = calendar.time
-    )
-    val firstPageState = loadingState.copy(
-        isLoading = false,
-        accountingDetailList = firstPageAdapterList
-    )
-    val addedLoadingState = firstPageState.copy(isLoading = true)
-    val addedState = addedLoadingState.copy(
-        isLoading = false,
-        accountingDetailList = firstPageAdapterList.let {
-          it.toMutableList()
-              .apply { add(1, addedContent) }
-        })
-
     `when`(accountingDao.insertAccounting(insertAccounting)).thenReturn(addedAccounting.id.toLong())
     `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
         .thenReturn(Maybe.just(firstPage))
@@ -249,8 +329,16 @@ class MainViewModelTest {
     .thenReturn("共(¥100.00)")
 
     val initialState = MainState(lastDate = calendar.time)
-    initViewModel(initialState)
+    mainViewModel = MainViewModel(
+        initialState,
+        accountingDao,
+        applicationContext)
 
+    mainViewModel.loadFirstPage()
+    val data = mutableListOf<Async<List<MainAccountingDetail>>>()
+    mainViewModel.selectSubscribe(owner, MainState::accountingDetailList) {
+      data.add(it)
+    }
     mainViewModel.addOrEditAccounting(
         accountingDetailList = firstPageAdapterList,
         accountingId = -1,
@@ -259,18 +347,20 @@ class MainViewModelTest {
         showDate = dateTimeFormat.format(addedAccounting.createTime),
         remarks = addedAccounting.remarks)
 
-    testStateStore.testAllStates { stateList ->
-      stateList.size == 5 && stateList[4] == addedState
-    }
+    assert(data.size == 3 &&
+        data[1] is Loading &&
+        data[2] is Success &&
+        data[2]() == firstPageAdapterList.let { it.toMutableList().apply { add(1, addedContent) }
+    })
   }
 
   @Test
   fun addOrEditAccounting_addAccounting_whenNoDatas() {
     val insertAccounting = Accounting(
-        100.0f,
-        calendar.time,
-        "早餐",
-        "gg"
+        amount = 100.0f,
+        createTime = calendar.time,
+        tagName = "早餐",
+        remarks = "gg"
     )
     val addedAccounting = insertAccounting.copy().apply { id = 3 * ONE_PAGE_SIZE + 1 }
     val addedHeader = MainAccountingDetailHeader(
@@ -284,15 +374,6 @@ class MainViewModelTest {
         addedAccounting.remarks,
         timeFormat.format(addedAccounting.createTime),
         addedAccounting.createTime
-    )
-
-    val addedState = MainState(
-        isLoading = false,
-        error = null,
-        accountingDetailList = listOf(addedHeader, addedContent),
-        isNoMoreData = true,
-        isNoData = false,
-        lastDate = calendar.time
     )
 
     `when`(accountingDao.insertAccounting(insertAccounting)).thenReturn(addedAccounting.id.toLong())
@@ -310,8 +391,12 @@ class MainViewModelTest {
     .thenReturn("共(¥100.00)")
 
     val initialState = MainState(lastDate = calendar.time)
-    initViewModel(initialState)
+    mainViewModel = MainViewModel(
+        initialState,
+        accountingDao,
+        applicationContext)
 
+    val values = getStateProperty(MainState::accountingDetailList)
     mainViewModel.addOrEditAccounting(
         accountingDetailList = emptyList(),
         accountingId = -1,
@@ -320,8 +405,14 @@ class MainViewModelTest {
         showDate = dateTimeFormat.format(addedAccounting.createTime),
         remarks = addedAccounting.remarks)
 
-    testStateStore.testAllStates { stateList ->
-      stateList.size == 5 && stateList[4] == addedState
+    assert(values.size == 3 &&
+        values[1] is Loading &&
+        values[2] is Success &&
+        values[2]() == listOf(addedHeader, addedContent))
+
+    withState(mainViewModel) {
+      assert(it.isNoMoreData)
+      assert(!it.isNoData)
     }
   }
 
@@ -337,18 +428,6 @@ class MainViewModelTest {
         updatedAccounting.remarks,
         timeFormat.format(updatedAccounting.createTime),
         updatedAccounting.createTime
-    )
-
-    val updatedState = MainState(
-        isLoading = false,
-        error = null,
-        accountingDetailList = firstPageAdapterList.let {
-          it.toMutableList()
-              .apply { set(1, updatedAdapterItem) }
-        },
-        isNoData = false,
-        isNoMoreData = false,
-        lastDate = calendar.time
     )
 
     `when`(accountingDao.insertAccounting(updatedAccounting))
@@ -367,8 +446,13 @@ class MainViewModelTest {
     .thenReturn("共(¥100.00)")
 
     val initialState = MainState(lastDate = calendar.time)
-    initViewModel(initialState)
+    mainViewModel = MainViewModel(
+        initialState,
+        accountingDao,
+        applicationContext)
 
+    mainViewModel.loadFirstPage()
+    val values = getStateProperty(MainState::accountingDetailList)
     mainViewModel.addOrEditAccounting(
         accountingDetailList = firstPageAdapterList,
         accountingId = updatedAccounting.id,
@@ -377,9 +461,13 @@ class MainViewModelTest {
         showDate = dateTimeFormat.format(updatedAccounting.createTime),
         remarks = updatedAccounting.remarks)
 
-    testStateStore.testAllStates { stateList ->
-      stateList.size == 5 && stateList[4] == updatedState
-    }
+    assert(
+        values.size == 3 &&
+        values[1] is Loading &&
+        values[2] is Success &&
+        values[2]() == firstPageAdapterList.let {
+          it.toMutableList().apply { set(1, updatedAdapterItem) }
+        })
   }
 
   @Test
@@ -388,15 +476,6 @@ class MainViewModelTest {
     val firstPageAdapterList = adapterList.take(2 * ONE_PAGE_SIZE)
     val afterDeletedAdapterList = firstPageAdapterList
         .subList(2, firstPageAdapterList.size)
-
-    val deletedState = MainState(
-        isLoading = false,
-        error = null,
-        accountingDetailList = afterDeletedAdapterList,
-        isNoData = false,
-        isNoMoreData = false,
-        lastDate = calendar.time
-    )
 
     `when`(accountingDao.queryPreviousAccounting(calendar.time, ONE_PAGE_SIZE.toLong()))
         .thenReturn(Maybe.just(firstPage))
@@ -412,14 +491,31 @@ class MainViewModelTest {
     .thenReturn("共(¥100.00)")
 
     val initialState = MainState(lastDate = calendar.time)
-    initViewModel(initialState)
+    mainViewModel = MainViewModel(
+        initialState,
+        accountingDao,
+        applicationContext)
 
+    mainViewModel.loadFirstPage()
+    val values = getStateProperty(MainState::accountingDetailList)
     mainViewModel.deleteAccounting(firstPageAdapterList, 1)
 
     Mockito.verify(accountingDao, Mockito.times(1)).deleteAccountingById(1)
 
-    testStateStore.testAllStates { stateList ->
-      stateList.size == 5 && stateList[4] == deletedState
+    assert(
+        values.size == 3 &&
+            values[1] is Loading &&
+            values[2] is Success &&
+            values[2]() == afterDeletedAdapterList
+    )
+  }
+
+  private fun <T> getStateProperty(prop: KProperty1<MainState, T>): MutableList<T> {
+    val values = mutableListOf<T>()
+    mainViewModel.selectSubscribe(owner, prop1 = prop) {
+      values.add(it)
     }
+
+    return values
   }
 }

@@ -1,32 +1,15 @@
 package com.littlegnal.accounting.base
 
-import io.reactivex.Scheduler
 import io.reactivex.android.plugins.RxAndroidPlugins
-import io.reactivex.annotations.NonNull
-import io.reactivex.disposables.Disposable
-import io.reactivex.internal.schedulers.ExecutorScheduler
+import io.reactivex.exceptions.CompositeException
 import io.reactivex.plugins.RxJavaPlugins
+import io.reactivex.schedulers.Schedulers
 import org.junit.rules.TestRule
 import org.junit.runner.Description
 import org.junit.runners.model.Statement
-import java.util.concurrent.Executor
-import java.util.concurrent.TimeUnit
 
 class RxImmediateSchedulerRule : TestRule {
-    private val immediate = object : Scheduler() {
-        override fun scheduleDirect(
-          @NonNull run: Runnable,
-          delay: Long,
-          @NonNull unit: TimeUnit
-        ): Disposable {
-            // this prevents StackOverflowErrors when scheduling with a delay
-            return super.scheduleDirect(run, 0, unit)
-        }
-
-        override fun createWorker(): Scheduler.Worker {
-            return ExecutorScheduler.ExecutorWorker(Executor { it.run() })
-        }
-    }
+  private var defaultExceptionHandler: Thread.UncaughtExceptionHandler? = null
 
     override fun apply(
       base: Statement,
@@ -35,19 +18,38 @@ class RxImmediateSchedulerRule : TestRule {
         return object : Statement() {
             @Throws(Throwable::class)
             override fun evaluate() {
-                RxJavaPlugins.setInitIoSchedulerHandler { immediate }
-                RxJavaPlugins.setInitComputationSchedulerHandler { immediate }
-                RxJavaPlugins.setInitNewThreadSchedulerHandler { immediate }
-                RxJavaPlugins.setInitSingleSchedulerHandler { immediate }
-                RxAndroidPlugins.setInitMainThreadSchedulerHandler { immediate }
-
-                try {
-                    base.evaluate()
-                } finally {
-                    RxJavaPlugins.reset()
-                    RxAndroidPlugins.reset()
-                }
+              RxAndroidPlugins.reset()
+              RxAndroidPlugins.setInitMainThreadSchedulerHandler { Schedulers.trampoline() }
+              RxAndroidPlugins.setMainThreadSchedulerHandler { Schedulers.trampoline() }
+              setRxImmediateSchedulers()
+              try {
+                base.evaluate()
+              } finally {
+                RxAndroidPlugins.reset()
+                clearRxImmediateScheduleres()
+              }
             }
         }
     }
+
+  private fun setRxImmediateSchedulers() {
+    RxJavaPlugins.reset()
+    RxJavaPlugins.setNewThreadSchedulerHandler { Schedulers.trampoline() }
+    RxJavaPlugins.setComputationSchedulerHandler { Schedulers.trampoline() }
+    RxJavaPlugins.setIoSchedulerHandler { Schedulers.trampoline() }
+    RxJavaPlugins.setSingleSchedulerHandler { Schedulers.trampoline() }
+    // This is necessary to prevent rxjava from swallowing errors
+    // https://github.com/ReactiveX/RxJava/issues/5234
+    defaultExceptionHandler = Thread.getDefaultUncaughtExceptionHandler()
+    Thread.setDefaultUncaughtExceptionHandler { _, e ->
+      if (e is CompositeException && e.exceptions.size == 1) throw e.exceptions[0]
+      throw e
+    }
+  }
+
+  private fun clearRxImmediateScheduleres() {
+    Thread.setDefaultUncaughtExceptionHandler(defaultExceptionHandler)
+    defaultExceptionHandler = null
+    RxJavaPlugins.reset()
+  }
 }

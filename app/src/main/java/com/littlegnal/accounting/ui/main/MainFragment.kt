@@ -13,14 +13,20 @@ import android.view.ViewGroup
 import androidx.fragment.app.DialogFragment
 import androidx.navigation.fragment.findNavController
 import androidx.navigation.ui.onNavDestinationSelected
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.airbnb.epoxy.EpoxyRecyclerView
+import com.airbnb.mvrx.Loading
 import com.airbnb.mvrx.MvRx
 import com.airbnb.mvrx.activityViewModel
 import com.airbnb.mvrx.withState
+import com.jakewharton.rxbinding3.recyclerview.scrollStateChanges
 import com.littlegnal.accounting.R
 import com.littlegnal.accounting.base.BaseFragment
 import com.littlegnal.accounting.base.DefaultItemDecoration
 import com.littlegnal.accounting.base.MvRxEpoxyController
 import com.littlegnal.accounting.base.simpleController
+import com.littlegnal.accounting.base.util.success
 import com.littlegnal.accounting.base.util.toast
 import com.littlegnal.accounting.ui.addedit.AddOrEditMvRxStateArgs
 import com.littlegnal.accounting.ui.main.adapter.MainAccountingDetailContent
@@ -40,22 +46,57 @@ class MainFragment : BaseFragment() {
 
   private val disposables = CompositeDisposable()
 
+  private var accountingRv: EpoxyRecyclerView? = null
+
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+
+    mainMvRxViewModel.loadFirstPage()
+  }
+
   override fun onCreateView(
     inflater: LayoutInflater,
     container: ViewGroup?,
     savedInstanceState: Bundle?
   ): View? {
     (activity as MainActivity).updateTitle(getString(R.string.app_name))
-    return inflater.inflate(R.layout.fragment_main, container, false)
+    return inflater.inflate(R.layout.fragment_main, container, false).apply {
+      accountingRv = findViewById<EpoxyRecyclerView>(R.id.rv_main_detail).apply {
+        setController(epoxyController)
+        addItemDecoration(DefaultItemDecoration(epoxyController.adapter) {
+          it !is MainAccountingDetailHeaderModel
+        })
+        scrollStateChanges()
+            .filter {
+              withState(mainMvRxViewModel) { state ->
+                !state.isNoMoreData
+              }
+            }
+            .filter {
+              withState(mainMvRxViewModel) { state ->
+                state.accountingDetailList !is Loading
+              }
+            }
+            .filter { it == RecyclerView.SCROLL_STATE_IDLE }
+            .filter {
+              val lastPosition = rv_main_detail.adapter?.itemCount?.minus(1) ?: 0
+              (rv_main_detail.layoutManager as LinearLayoutManager)
+                  .findLastCompletelyVisibleItemPosition() == lastPosition
+            }
+            .subscribe {
+              withState(mainMvRxViewModel) { state ->
+                state.success(state.accountingDetailList) { list ->
+                  mainMvRxViewModel.loadList(accountingDetailList = list, lastDate = state.lastDate)
+                }
+              }
+            }
+      }
+    }
   }
 
   override fun onViewCreated(view: View, savedInstanceState: Bundle?) {
     setHasOptionsMenu(true)
     super.onViewCreated(view, savedInstanceState)
-
-    rv_main_detail.setController(epoxyController)
-    rv_main_detail.addItemDecoration(
-        DefaultItemDecoration(epoxyController.adapter) { it !is MainAccountingDetailHeaderModel })
 
     fab_main_add_accounting.setOnClickListener {
       findNavController().navigate(
@@ -63,11 +104,9 @@ class MainFragment : BaseFragment() {
           Bundle().apply { putParcelable(MvRx.KEY_ARG, AddOrEditMvRxStateArgs(-1)) })
     }
 
-    mainMvRxViewModel.selectSubscribe(this, MainState::error, true) {
-      if (it != null) {
-        activity?.toast(it.message.toString())
-      }
-    }
+    mainMvRxViewModel.asyncSubscribe(this, MainState::accountingDetailList, true, onFail = {
+      activity?.toast(it.message.toString())
+    })
   }
 
   override fun onOptionsItemSelected(item: MenuItem?): Boolean {
@@ -80,7 +119,7 @@ class MainFragment : BaseFragment() {
 
     val menuItem: MenuItem? = menu?.findItem(R.id.summaryFragment)
     withState(mainMvRxViewModel) {
-      val isMenuEnabled = it.accountingDetailList.isNotEmpty()
+      val isMenuEnabled = it.accountingDetailList()?.isNotEmpty() == true
       if (menuItem?.isEnabled != isMenuEnabled) {
         val resIcon: Drawable? = resources.getDrawable(
             R.drawable.ic_show_chart_black_24dp,
@@ -112,7 +151,7 @@ class MainFragment : BaseFragment() {
 
       activity?.invalidateOptionsMenu()
 
-      state.accountingDetailList.apply {
+      state.accountingDetailList()?.apply {
         for (accountingDetail in this) {
           if (accountingDetail is MainAccountingDetailHeader) {
             mainAccountingDetailHeader {
@@ -150,15 +189,17 @@ class MainFragment : BaseFragment() {
         }
       }
 
-      if (state.isLoading) mainAccountingDetailLoading { id("loading") }
+      if (state.accountingDetailList is Loading) mainAccountingDetailLoading { id("loading") }
     }
 
   private fun showConfirmDeleteDialog(deleteId: Int) {
     val tag = "DeleteConfirmDialog"
     val dialog: DialogFragment = DeleteConfirmDialog().apply {
       okClickListener = DialogInterface.OnClickListener { _, _ ->
-        withState(mainMvRxViewModel) {
-          mainMvRxViewModel.deleteAccounting(it.accountingDetailList, deleteId)
+        withState(mainMvRxViewModel) { state ->
+          state.success(state.accountingDetailList) {
+            mainMvRxViewModel.deleteAccounting(it, deleteId)
+          }
         }
       }
     }
@@ -173,8 +214,10 @@ class MainFragment : BaseFragment() {
     dialog.show(activity?.supportFragmentManager, tag)
   }
 
-  override fun onDestroy() {
-    super.onDestroy()
+  override fun onDestroyView() {
+    accountingRv?.clearOnScrollListeners()
+    accountingRv = null
     disposables.dispose()
+    super.onDestroyView()
   }
 }

@@ -20,7 +20,7 @@ ext.versions = [
     mockitoVersion              : '2.11.0',
     frescoVersion               : '1.4.0',
     archComponentVersion        : '1.1.1',
-    kotlinVersion               : '1.3.10',
+    kotlinVersion               : '1.3.11',
     flexboxVersion              : '0.3.0',
     hamcrestVersion             : '1.3',
     rxrelay_version             : '2.0.0',

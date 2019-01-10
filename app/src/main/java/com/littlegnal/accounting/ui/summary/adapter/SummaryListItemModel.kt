@@ -32,8 +32,8 @@ abstract class SummaryListItemModel :
   @EpoxyAttribute var total: String? = null
 
   override fun bind(holder: SummaryListItemHolder) {
-    holder?.tag?.text = tag
-    holder?.total?.text = total
+    holder.tag?.text = tag
+    holder.total?.text = total
   }
 
   class SummaryListItemHolder : EpoxyHolder() {
@@ -42,8 +42,8 @@ abstract class SummaryListItemModel :
     var total: AppCompatTextView? = null
 
     override fun bindView(itemView: View) {
-      tag = itemView?.findViewById(R.id.tv_summary_list_item_tag)
-      total = itemView?.findViewById(R.id.tv_summary_list_item_total)
+      tag = itemView.findViewById(R.id.tv_summary_list_item_tag)
+      total = itemView.findViewById(R.id.tv_summary_list_item_total)
     }
   }
 }

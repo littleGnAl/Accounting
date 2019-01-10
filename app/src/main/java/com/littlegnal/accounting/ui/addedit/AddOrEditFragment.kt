@@ -11,6 +11,7 @@ import android.view.WindowManager
 import android.view.inputmethod.InputMethodManager
 import androidx.navigation.fragment.findNavController
 import com.airbnb.mvrx.BaseMvRxFragment
+import com.airbnb.mvrx.Fail
 import com.airbnb.mvrx.activityViewModel
 import com.airbnb.mvrx.args
 import com.airbnb.mvrx.fragmentViewModel
@@ -19,6 +20,7 @@ import com.jakewharton.rxbinding3.view.clicks
 import com.jakewharton.rxbinding3.widget.textChanges
 import com.littlegnal.accounting.R
 import com.littlegnal.accounting.base.util.plusAssign
+import com.littlegnal.accounting.base.util.success
 import com.littlegnal.accounting.base.util.toast
 import com.littlegnal.accounting.ui.main.MainActivity
 import com.littlegnal.accounting.ui.main.MainViewModel
@@ -33,7 +35,9 @@ import kotlinx.android.synthetic.main.fragment_add_or_edit.et_add_or_edit_remark
 import kotlinx.android.synthetic.main.fragment_add_or_edit.fbl_tag_container
 import kotlinx.android.synthetic.main.fragment_add_or_edit.sv_add_or_edit
 import kotlinx.android.synthetic.main.fragment_add_or_edit.tv_add_or_edit_date_value
+import java.text.SimpleDateFormat
 import java.util.Calendar
+import java.util.Locale
 import java.util.concurrent.TimeUnit
 
 class AddOrEditFragment : BaseMvRxFragment() {
@@ -61,6 +65,8 @@ class AddOrEditFragment : BaseMvRxFragment() {
       getString(R.string.add_or_edit_add_title)
     }
     (activity as MainActivity).updateTitle(title)
+
+    addOrEditMvRxViewModel.loadAccounting(accountingArgs.id)
   }
 
   override fun onCreateView(
@@ -109,14 +115,16 @@ class AddOrEditFragment : BaseMvRxFragment() {
         .throttleFirst(300, TimeUnit.MILLISECONDS)
         .subscribe {
           withState(mainMvRxViewModel) { preState ->
-            mainMvRxViewModel.addOrEditAccounting(
-                preState.accountingDetailList,
-                accountingArgs.id,
-                et_add_or_edit_pay_value.text.toString().toFloat(),
-                fbl_tag_container.getCheckedTagName(),
-                showDate,
-                et_add_or_edit_remarks.text.toString()
-            )
+            preState.success(preState.accountingDetailList) { preList ->
+              mainMvRxViewModel.addOrEditAccounting(
+                  preList,
+                  accountingArgs.id,
+                  et_add_or_edit_pay_value.text.toString().toFloat(),
+                  fbl_tag_container.getCheckedTagName(),
+                  showDate,
+                  et_add_or_edit_remarks.text.toString()
+              )
+            }
           }
 
           findNavController().navigateUp()
@@ -159,38 +167,49 @@ class AddOrEditFragment : BaseMvRxFragment() {
 
   private fun datePicker() {
     val c = Calendar.getInstance()
-    val datePickerDialog = DatePickerDialog(
-        context,
-        DatePickerDialog.OnDateSetListener { _, year, month, dayOfMonth ->
-          showDate = "$year/${month + 1}/$dayOfMonth"
-          timePicker()
-        },
-        c.get(Calendar.YEAR),
-        c.get(Calendar.MONTH),
-        c.get(Calendar.DAY_OF_MONTH)
-    )
-    datePickerDialog.datePicker.maxDate = c.timeInMillis
-    datePickerDialog.show()
+    context?.apply {
+      DatePickerDialog(
+          this,
+          DatePickerDialog.OnDateSetListener { _, year, month, dayOfMonth ->
+            showDate = "$year/${month + 1}/$dayOfMonth"
+            timePicker()
+          },
+          c.get(Calendar.YEAR),
+          c.get(Calendar.MONTH),
+          c.get(Calendar.DAY_OF_MONTH)
+      ).apply {
+        datePicker.maxDate = c.timeInMillis
+        show()
+      }
+    }
   }
 
   override fun invalidate() {
     withState(addOrEditMvRxViewModel) { state ->
-      if (state.error != null) {
-        activity?.toast(state.error.message.toString())
+      if ((state.accounting as? Fail)?.error != null) {
+        activity?.toast(state.accounting.error.message.toString())
         return@withState
       }
 
-      state.amount?.apply {
-        et_add_or_edit_pay_value.setText(this)
-        et_add_or_edit_pay_value.setSelection(this.length)
+      state.accounting()?.apply {
+        if (id == 0) return@withState
+
+        if (amount != 0.0f) {
+          val amountString = amount.toString()
+          et_add_or_edit_pay_value.setText(amountString)
+          et_add_or_edit_pay_value.setSelection(amountString.length)
+        }
+
+        if (tagName.isNotEmpty()) {
+          fbl_tag_container.selectTag(tagName)
+        }
+
+        val dateTime = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.getDefault()).format(createTime)
+        tv_add_or_edit_date_value.text = dateTime
+        selectedDateAndTimePublisher.onNext(dateTime)
+        showDate = dateTime
+        remarks?.apply { et_add_or_edit_remarks.setText(this) }
       }
-      state.tagName?.apply { fbl_tag_container.selectTag(this) }
-      state.dateTime?.apply {
-        tv_add_or_edit_date_value.text = this
-        selectedDateAndTimePublisher.onNext(this)
-        showDate = this
-      }
-      state.remarks?.apply { et_add_or_edit_remarks.setText(this) }
     }
   }
 

@@ -36,9 +36,8 @@ class DebugApp : App() {
 
     Timber.plant(Timber.DebugTree())
 
-    SoLoader.init(this, false)
-
     if (BuildConfig.DEBUG && FlipperUtils.shouldEnableFlipper(this)) {
+      SoLoader.init(this, false)
       val client = AndroidFlipperClient.getInstance(this)
       client.addPlugin(InspectorFlipperPlugin(this, DescriptorMapping.withDefaults()))
       client.start()
