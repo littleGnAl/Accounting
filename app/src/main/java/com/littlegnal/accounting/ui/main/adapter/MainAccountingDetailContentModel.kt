@@ -16,9 +16,9 @@
 
 package com.littlegnal.accounting.ui.main.adapter
 
-import androidx.constraintlayout.widget.ConstraintLayout
-import androidx.appcompat.widget.AppCompatTextView
 import android.view.View
+import androidx.appcompat.widget.AppCompatTextView
+import androidx.constraintlayout.widget.ConstraintLayout
 import com.airbnb.epoxy.EpoxyAttribute
 import com.airbnb.epoxy.EpoxyHolder
 import com.airbnb.epoxy.EpoxyModelClass
@@ -40,12 +40,12 @@ abstract class MainAccountingDetailContentModel :
   override fun bind(holder: ContentModel) {
     super.bind(holder)
 
-    holder?.tvTime?.text = time
-    holder?.tvTag?.text = tagName
-    holder?.tvRemarks?.text = remarks
-    holder?.tvAmount?.text = amount
-    holder?.parent?.setOnClickListener(clickListener)
-    holder?.parent?.setOnLongClickListener(longClickListener)
+    holder.tvTime.text = time
+    holder.tvTag.text = tagName
+    holder.tvRemarks.text = remarks
+    holder.tvAmount.text = amount
+    holder.parent.setOnClickListener(clickListener)
+    holder.parent.setOnLongClickListener(longClickListener)
   }
 
   class ContentModel : EpoxyHolder() {
@@ -56,13 +56,11 @@ abstract class MainAccountingDetailContentModel :
     lateinit var tvAmount: AppCompatTextView
 
     override fun bindView(itemView: View) {
-      itemView?.let {
-        parent = it.findViewById(R.id.main_accounting_detail_header_parent)
-        tvTime = it.findViewById(R.id.tv_main_accounting_detail_content_time)
-        tvTag = it.findViewById(R.id.tv_main_accounting_detail_content_tag_name)
-        tvRemarks = it.findViewById(R.id.tv_main_accounting_detail_content_remarks)
-        tvAmount = it.findViewById(R.id.tv_main_accounting_detail_content_amount)
-      }
+      parent = itemView.findViewById(R.id.main_accounting_detail_header_parent)
+      tvTime = itemView.findViewById(R.id.tv_main_accounting_detail_content_time)
+      tvTag = itemView.findViewById(R.id.tv_main_accounting_detail_content_tag_name)
+      tvRemarks = itemView.findViewById(R.id.tv_main_accounting_detail_content_remarks)
+      tvAmount = itemView.findViewById(R.id.tv_main_accounting_detail_content_amount)
     }
   }
 }

@@ -1,12 +1,15 @@
 package com.littlegnal.accounting.ui.addedit
 
 import androidx.lifecycle.Lifecycle
+import com.airbnb.mvrx.Async
+import com.airbnb.mvrx.Loading
+import com.airbnb.mvrx.Success
+import com.airbnb.mvrx.Uninitialized
+import com.airbnb.mvrx.withState
 import com.littlegnal.accounting.base.RxImmediateSchedulerRule
 import com.littlegnal.accounting.base.TestLifecycleOwner
-import com.littlegnal.accounting.base.TestMvRxStateStore
 import com.littlegnal.accounting.db.Accounting
 import com.littlegnal.accounting.db.AccountingDao
-import com.littlegnal.accounting.ui.addedit.AddOrEditViewModel.Companion.dateTimeFormat
 import io.reactivex.Maybe
 import org.junit.Before
 import org.junit.Rule
@@ -25,13 +28,6 @@ class AddOrEditViewModelTest {
   private lateinit var addOrEditViewModel: AddOrEditViewModel
 
   private lateinit var owner: TestLifecycleOwner
-
-  private lateinit var testMvRxStateStore: TestMvRxStateStore<AddOrEditMvRxViewState>
-
-  private fun initViewModel(initialState: AddOrEditMvRxViewState) {
-    testMvRxStateStore = TestMvRxStateStore.create(initialState)
-    addOrEditViewModel = AddOrEditViewModel(initialState, testMvRxStateStore, accountingDao)
-  }
 
   @Before
   fun setUp() {
@@ -52,39 +48,33 @@ class AddOrEditViewModelTest {
           set(Calendar.MILLISECOND, 0)
         }
     val account = Accounting(
-        100.0f,
-        calendar.time,
-        "早餐",
-        "100块的茶叶蛋"
-    )
-    account.id = 1
-
-    val loadingState = AddOrEditMvRxViewState(id = 1, isLoading = true, error = null)
-    val updateState = loadingState.copy(
-        isLoading = false,
-        amount = account.amount.toString(),
-        tagName = account.tagName,
-        dateTime = dateTimeFormat.format(account.createTime),
-        remarks = account.remarks
-    )
+        amount = 100.0f,
+        createTime = calendar.time,
+        tagName = "早餐",
+        remarks = "100块的茶叶蛋"
+    ).apply { id = 1 }
 
     Mockito.`when`(accountingDao.getAccountingById(1))
         .thenReturn(Maybe.just(account))
 
     val initialState = AddOrEditMvRxViewState(id = 1)
-    initViewModel(initialState)
+    addOrEditViewModel = AddOrEditViewModel(initialState, accountingDao)
 
-    testMvRxStateStore.testAllStates { stateList ->
-      stateList.size == 3 && stateList[2] == updateState
+    val data = mutableListOf<Async<Accounting>>()
+    addOrEditViewModel.selectSubscribe(owner, AddOrEditMvRxViewState::accounting) {
+      data.add(it)
     }
+    addOrEditViewModel.loadAccounting(1)
+    assert(data.size == 3 && data[1] is Loading && data[2] is Success && data[2]() == account)
   }
 
   @Test
   fun loadAccounting_add() {
     val initialState = AddOrEditMvRxViewState()
-    initViewModel(initialState)
-    testMvRxStateStore.testAllStates { stateList ->
-      stateList.size == 1 && stateList[0] == initialState
+    addOrEditViewModel = AddOrEditViewModel(initialState, accountingDao)
+    addOrEditViewModel.loadAccounting(-1)
+    withState(addOrEditViewModel) {
+      assert(it.id == -1 && it.accounting is Uninitialized)
     }
   }
 }

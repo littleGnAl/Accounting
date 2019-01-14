@@ -27,6 +27,12 @@ class SummaryFragment : BaseMvRxFragment() {
 
   private val disposables by lazy { CompositeDisposable() }
 
+  override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+
+    summaryViewModel.initiate()
+  }
+
   override fun onCreateView(
     inflater: LayoutInflater,
     container: ViewGroup?,
@@ -51,8 +57,6 @@ class SummaryFragment : BaseMvRxFragment() {
         .subscribe {
           summaryViewModel.switchMonth(it)
         }
-
-    summaryViewModel.loadSummary()
   }
 
   override fun invalidate() {
@@ -62,8 +66,10 @@ class SummaryFragment : BaseMvRxFragment() {
         return@withState
       }
 
-      summaryListController.setData(state.summaryItemList)
-      cv_summary_chart.summaryChartData = state.summaryChartData
+      if (!state.isLoading) {
+        summaryListController.setData(state.summaryItemList())
+        cv_summary_chart.summaryChartData = state.summaryChartData()!!
+      }
     }
   }
 }

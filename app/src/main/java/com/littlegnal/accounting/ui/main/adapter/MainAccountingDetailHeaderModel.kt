@@ -34,8 +34,8 @@ abstract class MainAccountingDetailHeaderModel :
   override fun bind(holder: HeaderHolder) {
     super.bind(holder)
 
-    holder?.header?.text = title
-    holder?.total?.text = total
+    holder.header.text = title
+    holder.total.text = total
   }
 
   class HeaderHolder : EpoxyHolder() {
@@ -44,10 +44,8 @@ abstract class MainAccountingDetailHeaderModel :
     lateinit var total: AppCompatTextView
 
     override fun bindView(itemView: View) {
-      itemView?.let {
-        header = itemView.findViewById(R.id.main_accounting_detail_header_title)
-        total = itemView.findViewById(R.id.main_accounting_detail_header_total)
-      }
+      header = itemView.findViewById(R.id.main_accounting_detail_header_title)
+      total = itemView.findViewById(R.id.main_accounting_detail_header_total)
     }
   }
 }

@@ -5,12 +5,8 @@ import android.content.Context
 import androidx.annotation.VisibleForTesting
 import androidx.fragment.app.FragmentActivity
 import com.airbnb.mvrx.BaseMvRxViewModel
-import com.airbnb.mvrx.Fail
-import com.airbnb.mvrx.Loading
-import com.airbnb.mvrx.MvRxStateStore
 import com.airbnb.mvrx.MvRxViewModelFactory
-import com.airbnb.mvrx.RealMvRxStateStore
-import com.airbnb.mvrx.Success
+import com.airbnb.mvrx.Uninitialized
 import com.littlegnal.accounting.R
 import com.littlegnal.accounting.base.MvRxViewModel
 import com.littlegnal.accounting.db.AccountingDao
@@ -19,8 +15,6 @@ import com.littlegnal.accounting.ui.main.MainActivity
 import com.littlegnal.accounting.ui.summary.adapter.SummaryListItem
 import com.squareup.inject.assisted.Assisted
 import com.squareup.inject.assisted.AssistedInject
-import io.reactivex.Observable
-import io.reactivex.functions.BiFunction
 import io.reactivex.schedulers.Schedulers
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -29,16 +23,14 @@ import java.util.Locale
 
 class SummaryViewModel @AssistedInject constructor(
   @Assisted initialState: SummaryMvRxViewState,
-  @Assisted stateStore: MvRxStateStore<SummaryMvRxViewState>,
   private val accountingDao: AccountingDao,
   private val applicationContext: Context
-) : MvRxViewModel<SummaryMvRxViewState>(initialState, stateStore) {
+) : MvRxViewModel<SummaryMvRxViewState>(initialState) {
 
   @AssistedInject.Factory
   interface Factory {
     fun create(
-      initialState: SummaryMvRxViewState,
-      stateStore: MvRxStateStore<SummaryMvRxViewState>
+      initialState: SummaryMvRxViewState
     ): SummaryViewModel
   }
 
@@ -49,36 +41,16 @@ class SummaryViewModel @AssistedInject constructor(
   @VisibleForTesting
   val monthFormat: SimpleDateFormat = SimpleDateFormat("MMM", Locale.getDefault())
 
-  fun loadSummary() {
-    Observable.zip(
-        getSummaryChartData(),
-        getSummaryItemList(),
-        BiFunction { summaryChartData: SummaryChartData, list: List<SummaryListItem> ->
-          summaryChartData to list
-        })
-        .execute {
-          when (it) {
-            is Fail -> {
-              copy(isLoading = false, error = it.error)
-            }
-            is Success -> {
-              val pair = it()!!
-              copy(
-                  isLoading = false,
-                  summaryChartData = pair.first,
-                  summaryItemList = pair.second)
-            }
-            is Loading -> {
-              copy(isLoading = true)
-            }
-            else -> {
-              copy()
-            }
-          }
-        }
+  fun initiate() {
+    getSummaryChartData()
+    getSummaryItemList()
   }
 
-  private fun getSummaryChartData() =
+  @VisibleForTesting
+  fun getSummaryChartData() {
+    withState { state ->
+      if (state.summaryChartData !is Uninitialized) return@withState
+
       accountingDao.getMonthTotalAmount(6)
           .toObservable()
           .map { list ->
@@ -152,14 +124,28 @@ class SummaryViewModel @AssistedInject constructor(
                 selectedIndex = selectedIndex)
           }
           .subscribeOn(Schedulers.io())
+          .execute {
+            copy(summaryChartData = it)
+          }
+    }
+  }
 
-  private fun getSummaryItemList() =
-      accountingDao.getLastGroupingMonthTotalAmountObservable()
-        .toObservable()
-        .map {
-          createSummaryListItems(it)
-        }
-        .subscribeOn(Schedulers.io())
+  @VisibleForTesting
+  fun getSummaryItemList() {
+    withState { state ->
+      if (state.summaryItemList !is Uninitialized) return@withState
+
+      accountingDao.getGroupingTagOfLatestMonthObservable()
+          .toObservable()
+          .map {
+            createSummaryListItems(it)
+          }
+          .subscribeOn(Schedulers.io())
+          .execute {
+            copy(summaryItemList = it)
+          }
+    }
+  }
 
   // TODO: make extensions function
   @VisibleForTesting
@@ -206,20 +192,7 @@ class SummaryViewModel @AssistedInject constructor(
     .toObservable()
     .subscribeOn(Schedulers.io())
     .execute {
-      when (it) {
-        is Loading -> {
-          copy(isLoading = true, error = null)
-        }
-        is Fail -> {
-          copy(isLoading = false, error = it.error)
-        }
-        is Success -> {
-          copy(isLoading = false, error = null, summaryItemList = it()!!)
-        }
-        else -> {
-          copy()
-        }
-      }
+      copy(summaryItemList = it)
     }
   }
 
@@ -228,8 +201,7 @@ class SummaryViewModel @AssistedInject constructor(
       activity: FragmentActivity,
       state: SummaryMvRxViewState
     ): BaseMvRxViewModel<SummaryMvRxViewState> {
-      return (activity as MainActivity).summaryViewModelFactory
-          .create(state, RealMvRxStateStore(state))
+      return (activity as MainActivity).summaryViewModelFactory.create(state)
     }
   }
 }

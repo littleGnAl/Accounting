@@ -29,6 +29,9 @@ class MainActivity : BaseMvRxActivity() {
     setupActionBarWithNavController(findNavController(R.id.nav_host_fragment))
   }
 
+  override fun onSupportNavigateUp(): Boolean =
+    findNavController(R.id.nav_host_fragment).navigateUp()
+
   fun updateTitle(title: CharSequence) {
     findViewById<Toolbar>(R.id.base_toolbar).title = title
   }

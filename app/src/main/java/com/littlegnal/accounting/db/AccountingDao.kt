@@ -83,6 +83,22 @@ interface AccountingDao {
     month: String
   ): Maybe<List<TagAndTotal>>
 
+  @Query(
+      """
+      SELECT SUM(amount) as total, tag_name, (SELECT createTime
+        FROM accounting
+        ORDER BY createTime
+        LIMIT 1) lastTime
+      FROM accounting
+      WHERE strftime('%Y', createTime / 1000, 'unixepoch') =
+        strftime('%Y', lastTime / 1000, 'unixepoch') AND
+        strftime('%m', createTime / 1000, 'unixepoch') =
+          strftime('%m', lastTime / 1000, 'unixepoch')
+      GROUP BY tag_name
+      """
+  )
+  fun getGroupingTagOfLatestMonthObservable(): Maybe<List<TagAndTotal>>
+
   @Deprecated("This will no long used")
   @Query(
       """
@@ -105,7 +121,6 @@ interface AccountingDao {
     FROM accounting
     GROUP BY tag_name
     ORDER BY year_month DESC
-    LIMIT 1
     """
   )
   fun getLastGroupingMonthTotalAmountObservable(): Maybe<List<TagAndTotal>>

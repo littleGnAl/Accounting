@@ -1,6 +1,10 @@
 package com.littlegnal.accounting.ui.summary
 
+import com.airbnb.mvrx.Async
+import com.airbnb.mvrx.Fail
+import com.airbnb.mvrx.Loading
 import com.airbnb.mvrx.MvRxState
+import com.airbnb.mvrx.Uninitialized
 import com.littlegnal.accounting.ui.summary.adapter.SummaryListItem
 import java.util.Date
 
@@ -12,8 +16,9 @@ data class SummaryChartData(
 )
 
 data class SummaryMvRxViewState(
-  val isLoading: Boolean = false,
-  val summaryChartData: SummaryChartData = SummaryChartData(),
-  val summaryItemList: List<SummaryListItem> = emptyList(),
-  val error: Throwable? = null
-) : MvRxState
+  val summaryChartData: Async<SummaryChartData> = Uninitialized,
+  val summaryItemList: Async<List<SummaryListItem>> = Uninitialized
+) : MvRxState {
+  val isLoading: Boolean = summaryChartData is Loading || summaryItemList is Loading
+  val error: Throwable? = (summaryChartData as? Fail)?.error ?: (summaryItemList as? Fail)?.error
+}

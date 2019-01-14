@@ -7,10 +7,9 @@ import androidx.fragment.app.FragmentActivity
 import com.airbnb.mvrx.BaseMvRxViewModel
 import com.airbnb.mvrx.Fail
 import com.airbnb.mvrx.Loading
-import com.airbnb.mvrx.MvRxStateStore
 import com.airbnb.mvrx.MvRxViewModelFactory
-import com.airbnb.mvrx.RealMvRxStateStore
 import com.airbnb.mvrx.Success
+import com.airbnb.mvrx.Uninitialized
 import com.littlegnal.accounting.R
 import com.littlegnal.accounting.base.MvRxViewModel
 import com.littlegnal.accounting.base.util.toHms0
@@ -28,21 +27,23 @@ import java.util.Date
 
 class MainViewModel @AssistedInject constructor(
   @Assisted initialState: MainState,
-  @Assisted stateStore: MvRxStateStore<MainState>,
   private val accountingDao: AccountingDao,
   private val applicationContext: Context
-) : MvRxViewModel<MainState>(initialState, stateStore) {
+) : MvRxViewModel<MainState>(initialState) {
 
   @AssistedInject.Factory
   interface Factory {
     fun create(
-      initialState: MainState,
-      stateStore: MvRxStateStore<MainState>
+      initialState: MainState
     ): MainViewModel
   }
 
-  init {
-      loadList(lastDate = initialState.lastDate)
+  fun loadFirstPage() {
+    withState { mainState ->
+      if (mainState.accountingDetailList !is Uninitialized) return@withState
+
+      loadList(lastDate = mainState.lastDate)
+    }
   }
 
   fun loadList(
@@ -57,13 +58,6 @@ class MainViewModel @AssistedInject constructor(
           val isFirstPage = newAdapterList.isEmpty()
           if (isFirstPage) {
             newAdapterList.addAll(createFirstPageList(lastDate, accountingList))
-//            copy(
-//                error = null,
-//                isLoading = false,
-//                accountingDetailList = newAdapterList,
-//                isNoMoreData = accountingList.size < ONE_PAGE_SIZE,
-//                isNoData = accountingList.isEmpty()
-//            )
           } else {
             newAdapterList.addAll(createAccountingDetailList(lastDate, accountingList))
 
@@ -78,16 +72,6 @@ class MainViewModel @AssistedInject constructor(
 
               ""
             }
-
-//                .let {
-//                  previousState.copy(
-//                      error = null,
-//                      isLoading = false,
-//                      accountingDetailList = it,
-//                      isNoMoreData = accountingList.size < ONE_PAGE_SIZE,
-//                      isNoData = false
-//                  )
-//                }
           }
           newAdapterList to (accountingList.size < ONE_PAGE_SIZE)
         }
@@ -96,18 +80,20 @@ class MainViewModel @AssistedInject constructor(
           when (it) {
             is Success -> {
               val (list, isNoMoreData) = it()!!
+              val tempLastDate = (list.lastOrNull() as? MainAccountingDetailContent)
+                  ?.createTime ?: this.lastDate
+
               copy(
-                error = null,
-                isLoading = false,
-                accountingDetailList = list,
-                isNoData = list.isEmpty(),
-                isNoMoreData = isNoMoreData)
+                  accountingDetailList = Success(list),
+                  isNoData = list.isEmpty(),
+                  isNoMoreData = isNoMoreData,
+                  lastDate = tempLastDate)
             }
             is Fail -> {
-              copy(error = it.error, isLoading = false)
+              copy(accountingDetailList = Fail(it.error))
             }
             is Loading -> {
-              copy(isLoading = true)
+              copy(accountingDetailList = Loading())
             }
             else -> {
               copy()
@@ -200,10 +186,10 @@ class MainViewModel @AssistedInject constructor(
   ) {
     Observable.fromCallable {
       val accounting = Accounting(
-          amount,
-          dateTimeFormat.parse(showDate),
-          tagName,
-          remarks
+          amount = amount,
+          createTime = dateTimeFormat.parse(showDate),
+          tagName = tagName,
+          remarks = remarks
       )
       val insertedId = accountingDao.insertAccounting(accounting)
       accounting.id = insertedId.toInt()
@@ -252,17 +238,15 @@ class MainViewModel @AssistedInject constructor(
     .execute {
       when (it) {
         is Loading -> {
-          copy(error = null, isLoading = true)
+          copy(accountingDetailList = it)
         }
         is Fail -> {
-          copy(error = it.error, isLoading = false)
+          copy(accountingDetailList = it)
         }
         is Success -> {
           val list = it()!!
           copy(
-              accountingDetailList = list,
-              isLoading = false,
-              error = null,
+              accountingDetailList = it,
               isNoData = list.isEmpty(),
               isNoMoreData = list.size < ONE_PAGE_SIZE)
         }
@@ -281,10 +265,10 @@ class MainViewModel @AssistedInject constructor(
   ) {
     Observable.fromCallable {
       val accounting = Accounting(
-          amount,
-          dateTimeFormat.parse(showDate),
-          tagName,
-          remarks
+          amount = amount,
+          createTime = dateTimeFormat.parse(showDate),
+          tagName = tagName,
+          remarks = remarks
       ).apply { id = accountingId }
       accountingDao.insertAccounting(accounting)
       val newContent = createDetailContent(accounting)
@@ -307,17 +291,15 @@ class MainViewModel @AssistedInject constructor(
     .execute {
       when (it) {
         is Loading -> {
-          copy(isLoading = true, error = null)
+          copy(accountingDetailList = it)
         }
         is Fail -> {
-          copy(isLoading = false, error = it.error)
+          copy(accountingDetailList = it)
         }
         is Success -> {
           val list = it()!!
           copy(
-              isLoading = false,
-              error = null,
-              accountingDetailList = list,
+              accountingDetailList = it,
               isNoData = list.isEmpty(),
               isNoMoreData = list.size < ONE_PAGE_SIZE)
         }
@@ -368,19 +350,17 @@ class MainViewModel @AssistedInject constructor(
     .execute {
       when (it) {
         is Loading -> {
-          copy(error = null, isLoading = true)
+          copy(accountingDetailList = it)
         }
         is Success -> {
           val list = it()!!
           copy(
-              error = null,
-              isLoading = false,
-              accountingDetailList = list,
+              accountingDetailList = it,
               isNoData = list.isEmpty(),
               isNoMoreData = list.size < ONE_PAGE_SIZE)
         }
         is Fail -> {
-          copy(error = it.error, isLoading = false)
+          copy(accountingDetailList = it)
         }
         else -> { copy() }
       }
@@ -425,8 +405,7 @@ class MainViewModel @AssistedInject constructor(
       activity: FragmentActivity,
       state: MainState
     ): BaseMvRxViewModel<MainState> {
-      return (activity as MainActivity).mainViewModelFactory
-          .create(state, RealMvRxStateStore(state))
+      return (activity as MainActivity).mainViewModelFactory.create(state)
     }
   }
 }
