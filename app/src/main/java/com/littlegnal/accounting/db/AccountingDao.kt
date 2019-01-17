@@ -121,6 +121,7 @@ interface AccountingDao {
     FROM accounting
     GROUP BY tag_name
     ORDER BY year_month DESC
+    LIMIT 1
     """
   )
   fun getLastGroupingMonthTotalAmountObservable(): Maybe<List<TagAndTotal>>
