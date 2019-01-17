@@ -5,12 +5,18 @@ workspace: &workspace
 
 android_build_environment: &android_build_environment
     working_directory: *workspace
-    resource_class: xlarge
     docker:
         - image: circleci/android:api-28-alpha
     environment:
         JVM_OPTS: -Xmx3200m
         TERM: dumb
+
+config_gcloud: &config_gcloud
+    working_directory: *workspace
+    docker:
+      - image: google/cloud-sdk:latest
+    environment:
+      TERM: dumb
 
 cache_key: &cache_key
     key: jars-{{ checksum "build.gradle" }}-{{ checksum "app/build.gradle" }}-{{ checksum "dependencies.gradle"}}-{{ checksum "gradle/wrapper/gradle-wrapper.properties" }}
@@ -60,7 +66,7 @@ jobs:
 
             - run:
                 name: Generating apk
-                command: ./gradlew :app:assemble
+                command: ./gradlew :app:assemble :app:assembleAndroidTest
             - store_artifacts:
                 path: app/build/outputs/apk
                 destination: apk
@@ -86,6 +92,26 @@ jobs:
 
             - *save_cache 
 
+    ftl_tests:
+        <<: *config_gcloud
+
+        steps:
+            - *attach_workspace
+            - run:
+                name: Setup Google Cloud auth
+                command: bash ftl-tests/setup.sh
+            - run: 
+                name: Run tests on Firebase Test Lab
+                command: bash ftl-tests/run-tests.sh
+#            - run:
+#                name: Download results
+#                command: bash ftl-tests/download-results.sh firebase_test_results
+                when: always
+            - store_artifacts:
+                path: firebase_test_results
+            - store_test_results:
+                path: firebase_test_results
+
 workflows:
     version: 2
 
@@ -98,6 +124,9 @@ workflows:
             - test:
                 requires: 
                     - checkout_code
+            - ftl_tests:
+                requires:
+                    - build
              
 
 
