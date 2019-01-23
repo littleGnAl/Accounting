@@ -63,7 +63,7 @@ ext.libraries = [
     rxrelay                   : "com.jakewharton.rxrelay2:rxrelay:$versions.rxrelay_version",
     ktlint                    : "com.github.shyiko:ktlint:$versions.ktlint_version",
     flipper                   : "com.facebook.flipper:flipper:$versions.flipper",
-    mvrx                      : "com.airbnb.android:mvrx:0.6.0"
+    mvrx                      : "com.airbnb.android:mvrx:0.7.2"
 ]
 
 ext.test = [

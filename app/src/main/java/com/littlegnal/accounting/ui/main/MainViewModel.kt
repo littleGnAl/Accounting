@@ -3,13 +3,12 @@ package com.littlegnal.accounting.ui.main
 import android.annotation.SuppressLint
 import android.content.Context
 import androidx.annotation.VisibleForTesting
-import androidx.fragment.app.FragmentActivity
-import com.airbnb.mvrx.BaseMvRxViewModel
 import com.airbnb.mvrx.Fail
 import com.airbnb.mvrx.Loading
 import com.airbnb.mvrx.MvRxViewModelFactory
 import com.airbnb.mvrx.Success
 import com.airbnb.mvrx.Uninitialized
+import com.airbnb.mvrx.ViewModelContext
 import com.littlegnal.accounting.R
 import com.littlegnal.accounting.base.MvRxViewModel
 import com.littlegnal.accounting.base.util.toHms0
@@ -382,7 +381,7 @@ class MainViewModel @AssistedInject constructor(
         }
   }
 
-  companion object : MvRxViewModelFactory<MainState> {
+  companion object : MvRxViewModelFactory<MainViewModel, MainState> {
 
     const val ONE_PAGE_SIZE = 15
 
@@ -401,11 +400,11 @@ class MainViewModel @AssistedInject constructor(
     @SuppressLint("SimpleDateFormat")
     val dateTimeFormat = SimpleDateFormat("yyyy/MM/dd HH:mm")
 
-    @JvmStatic override fun create(
-      activity: FragmentActivity,
+    override fun create(
+      viewModelContext: ViewModelContext,
       state: MainState
-    ): BaseMvRxViewModel<MainState> {
-      return (activity as MainActivity).mainViewModelFactory.create(state)
+    ): MainViewModel? {
+      return (viewModelContext.activity as MainActivity).mainViewModelFactory.create(state)
     }
   }
 }

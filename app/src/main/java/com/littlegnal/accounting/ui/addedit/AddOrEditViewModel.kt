@@ -2,13 +2,12 @@ package com.littlegnal.accounting.ui.addedit
 
 import android.annotation.SuppressLint
 import androidx.annotation.VisibleForTesting
-import androidx.fragment.app.FragmentActivity
-import com.airbnb.mvrx.BaseMvRxViewModel
 import com.airbnb.mvrx.Fail
 import com.airbnb.mvrx.Loading
 import com.airbnb.mvrx.MvRxViewModelFactory
 import com.airbnb.mvrx.Success
 import com.airbnb.mvrx.Uninitialized
+import com.airbnb.mvrx.ViewModelContext
 import com.littlegnal.accounting.base.MvRxViewModel
 import com.littlegnal.accounting.db.AccountingDao
 import com.littlegnal.accounting.ui.main.MainActivity
@@ -61,17 +60,17 @@ class AddOrEditViewModel @AssistedInject constructor(
     }
   }
 
-  companion object : MvRxViewModelFactory<AddOrEditMvRxViewState> {
+  companion object : MvRxViewModelFactory<AddOrEditViewModel, AddOrEditMvRxViewState> {
 
     @VisibleForTesting
     @SuppressLint("SimpleDateFormat")
     val dateTimeFormat = SimpleDateFormat("yyyy/MM/dd HH:mm")
 
-    @JvmStatic override fun create(
-      activity: FragmentActivity,
+    override fun create(
+      viewModelContext: ViewModelContext,
       state: AddOrEditMvRxViewState
-    ): BaseMvRxViewModel<AddOrEditMvRxViewState> {
-      return (activity as MainActivity).addOrEditViewModelFactory.create(state)
+    ): AddOrEditViewModel? {
+      return (viewModelContext.activity as MainActivity).addOrEditViewModelFactory.create(state)
     }
   }
 }
