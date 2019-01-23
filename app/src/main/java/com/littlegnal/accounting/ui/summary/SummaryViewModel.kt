@@ -3,12 +3,12 @@ package com.littlegnal.accounting.ui.summary
 import android.annotation.SuppressLint
 import android.content.Context
 import androidx.annotation.VisibleForTesting
-import androidx.fragment.app.FragmentActivity
-import com.airbnb.mvrx.BaseMvRxViewModel
 import com.airbnb.mvrx.MvRxViewModelFactory
 import com.airbnb.mvrx.Uninitialized
+import com.airbnb.mvrx.ViewModelContext
 import com.littlegnal.accounting.R
 import com.littlegnal.accounting.base.MvRxViewModel
+import com.littlegnal.accounting.base.util.monthBetween
 import com.littlegnal.accounting.db.AccountingDao
 import com.littlegnal.accounting.db.TagAndTotal
 import com.littlegnal.accounting.ui.main.MainActivity
@@ -77,7 +77,6 @@ class SummaryViewModel @AssistedInject constructor(
               today.add(Calendar.MONTH, 1)
             }
 
-//          var summaryItemList: List<SummaryListItem> = listOf()
             var selectedIndex = -1
 
             if (list.isNotEmpty()) {
@@ -102,7 +101,7 @@ class SummaryViewModel @AssistedInject constructor(
                     monthTotalCalendar.get(Calendar.YEAR) >
                     firstMonthCalendar.get(Calendar.YEAR)
                 ) {
-                  val index = calcMonthOffset(monthTotalCalendar, firstMonthCalendar)
+                  val index = monthTotalCalendar.monthBetween(firstMonthCalendar)
                   points.add(Pair(index, monthTotal.total))
                   val total: Float = monthTotal.total
                   values.add(
@@ -114,7 +113,7 @@ class SummaryViewModel @AssistedInject constructor(
                 }
               }
 
-              selectedIndex = calcMonthOffset(latestMonthCalendar, firstMonthCalendar)
+              selectedIndex = latestMonthCalendar.monthBetween(firstMonthCalendar)
             }
 
             SummaryChartData(
@@ -147,25 +146,6 @@ class SummaryViewModel @AssistedInject constructor(
     }
   }
 
-  // TODO: make extensions function
-  @VisibleForTesting
-  fun ensureNum2Length(num: Int): String =
-      if (num < 10) {
-        "0$num"
-      } else {
-        num.toString()
-      }
-
-  // TODO: make extensions function
-  private fun calcMonthOffset(
-    calendar1: Calendar,
-    calendar2: Calendar
-  ): Int {
-    val month1 = calendar1.get(Calendar.YEAR) * 12 + calendar1.get(Calendar.MONTH)
-    val month2 = calendar2.get(Calendar.YEAR) * 12 + calendar2.get(Calendar.MONTH)
-    return Math.abs(month1 - month2)
-  }
-
   private fun createSummaryListItems(list: List<TagAndTotal>): List<SummaryListItem> {
     val summaryItemList: MutableList<SummaryListItem> = mutableListOf()
     return list.mapTo(summaryItemList) {
@@ -184,7 +164,7 @@ class SummaryViewModel @AssistedInject constructor(
     val month: Int = selectedCalendar.get(Calendar.MONTH) + 1
     accountingDao.getGroupingMonthTotalAmountObservable(
         year.toString(),
-        ensureNum2Length(month)
+        String.format("%02d", month)
     )
     .map {
       createSummaryListItems(it)
@@ -196,12 +176,12 @@ class SummaryViewModel @AssistedInject constructor(
     }
   }
 
-  companion object : MvRxViewModelFactory<SummaryMvRxViewState> {
-    @JvmStatic override fun create(
-      activity: FragmentActivity,
+  companion object : MvRxViewModelFactory<SummaryViewModel, SummaryMvRxViewState> {
+    override fun create(
+      viewModelContext: ViewModelContext,
       state: SummaryMvRxViewState
-    ): BaseMvRxViewModel<SummaryMvRxViewState> {
-      return (activity as MainActivity).summaryViewModelFactory.create(state)
+    ): SummaryViewModel? {
+      return (viewModelContext.activity as MainActivity).summaryViewModelFactory.create(state)
     }
   }
 }

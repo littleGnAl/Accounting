@@ -264,12 +264,12 @@ class SummaryViewModelTest {
     Mockito.`when`(
         accountingDao.getGroupingMonthTotalAmountObservable(
             firstCalendar.get(Calendar.YEAR).toString(),
-            summaryViewModel.ensureNum2Length(firstCalendar.get(Calendar.MONTH) + 1)))
+            String.format("%02d", firstCalendar.get(Calendar.MONTH) + 1)))
         .thenReturn(Maybe.just(listOf(tagAndTotal1)))
 
     Mockito.`when`(accountingDao.getGroupingMonthTotalAmountObservable(
         latestCalendar.get(Calendar.YEAR).toString(),
-        summaryViewModel.ensureNum2Length(latestCalendar.get(Calendar.MONTH) + 1)))
+        String.format("%02d", latestCalendar.get(Calendar.MONTH) + 1)))
         .thenReturn(Maybe.just(listOf(tagAndTotal2)))
 
     summaryViewModel.getSummaryChartData()
